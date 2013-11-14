@@ -802,7 +802,7 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
                                                         && (previousStats.getCurrentBytesReceived() != stats.getCurrentBytesReceived() || previousStats.getCurrentBytesSent() != stats
                                                         .getCurrentBytesSent())) {
                                                     s_logger.debug("Router stats changed from the time NetworkUsageCommand was sent. " + "Ignoring current answer. Router: "
-                                                            + answerFinal.getRouterName() + " Rcvd: " + answerFinal.getBytesReceived() + "Sent: " + answerFinal.getBytesSent());
+                                                            + answerFinal.getRouterName() + " Rcvd: " + answerFinal.getBytesReceived() + ", Sent: " + answerFinal.getBytesSent());
                                                     return;
                                                 }
 
@@ -2460,7 +2460,7 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
                                             && (previousStats.getCurrentBytesReceived() != stats.getCurrentBytesReceived() || previousStats.getCurrentBytesSent() != stats
                                             .getCurrentBytesSent())) {
                                         s_logger.debug("Router stats changed from the time NetworkUsageCommand was sent. " + "Ignoring current answer. Router: "
-                                                + answerFinal.getRouterName() + " Rcvd: " + answerFinal.getBytesReceived() + "Sent: " + answerFinal.getBytesSent());
+                                                + answerFinal.getRouterName() + " Rcvd: " + answerFinal.getBytesReceived() + ", Sent: " + answerFinal.getBytesSent());
                                         return;
                                     }
 
