@@ -19,11 +19,6 @@
 
 package com.cloud.hypervisor.kvm.resource.wrapper;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +35,6 @@ import com.cloud.agent.api.VMSnapshotTO;
 import com.cloud.hypervisor.kvm.resource.LibvirtComputingResource;
 import com.cloud.resource.CommandWrapper;
 import com.cloud.resource.ResourceWrapper;
-import com.cloud.utils.script.Script;
 import com.cloud.vm.VirtualMachine;
 
 @ResourceWrapper(handles =  RestoreVMSnapshotCommand.class)
@@ -72,27 +66,15 @@ public final class LibvirtRestoreVMSnapshotCommandWrapper extends CommandWrapper
                 VMSnapshotTO parent = snapshotAndParents.get(snapshot.getId());
                 String vmSnapshotXML = libvirtUtilitiesHelper.generateVMSnapshotXML(snapshot, parent, xmlDesc);
                 s_logger.debug("Restoring vm snapshot " + snapshot.getSnapshotName() + " on " + vmName + " with XML:\n " + vmSnapshotXML);
-                File tmpCfgFile = null;
                 try {
-                    tmpCfgFile = File.createTempFile(vmName + "-", "cfg");
-                    final PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(tmpCfgFile)));
-                    out.println(vmSnapshotXML);
-                    out.close();
-                    String cfgFilePath = tmpCfgFile.getAbsolutePath();
-                    String cmdvirsh = "virsh snapshot-create --redefine " + vmName + (snapshot.getCurrent()? " --current ":" ") + cfgFilePath;
-                    int cmdout = Script.runSimpleBashScriptForExitValue(cmdvirsh);
-                    String result = null;
-                    if (cmdout != 0) {
-                        result = "Failed to migrate domain with exit value:" + cmdout;
-                        return new RestoreVMSnapshotAnswer(cmd, false, result);
+                    int flags = 1; // VIR_DOMAIN_SNAPSHOT_CREATE_REDEFINE = 1
+                    if (snapshot.getCurrent()) {
+                        flags += 2; // VIR_DOMAIN_SNAPSHOT_CREATE_CURRENT = 2
                     }
-                } catch (IOException e) {
+                    dm.snapshotCreateXML(vmSnapshotXML, flags);
+                } catch (LibvirtException e) {
                     s_logger.debug("Failed to restore vm snapshot " + snapshot.getSnapshotName() + " on " + vmName);
                     return new RestoreVMSnapshotAnswer(cmd, false, e.toString());
-                } finally {
-                    if (tmpCfgFile != null) {
-                        tmpCfgFile.delete();
-                    }
                 }
             }
 

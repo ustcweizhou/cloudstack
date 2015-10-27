@@ -17,13 +17,10 @@
 package com.cloud.hypervisor.kvm.resource;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.InetAddress;
@@ -3469,18 +3466,17 @@ public class LibvirtComputingResource extends ServerResourceBase implements Serv
         } catch (LibvirtException e) {
             s_logger.debug("Fail to get the current vm snapshot for vm: " + dm.getName() + ", continue");
         }
-        for (String snapshotName: dm.snapshotListNames()) {
+        int flags = 2; // VIR_DOMAIN_SNAPSHOT_DELETE_METADATA_ONLY = 2
+        String[] snapshotNames = dm.snapshotListNames();
+        Arrays.sort(snapshotNames);
+        for (String snapshotName: snapshotNames) {
             DomainSnapshot snapshot = dm.snapshotLookupByName(snapshotName);
             Boolean isCurrent = (currentSnapshotName != null && currentSnapshotName.equals(snapshotName)) ? true: false;
             vmsnapshots.add(new Ternary<String, Boolean, String>(snapshotName, isCurrent, snapshot.getXMLDesc()));
-            snapshot.free();
         }
-        for (String snapshotName: dm.snapshotListNames()) {
-            String cmdvirsh = "virsh snapshot-delete --metadata " + dm.getName() + " " + snapshotName;
-            int cmdout = Script.runSimpleBashScriptForExitValue(cmdvirsh);
-            if (cmdout != 0) {
-                s_logger.debug("Fail to delete the metadata of vm snapshot: " + snapshotName);
-            }
+        for (String snapshotName: snapshotNames) {
+            DomainSnapshot snapshot = dm.snapshotLookupByName(snapshotName);
+            snapshot.delete(flags); // clean metadata of vm snapshot
         }
         return vmsnapshots;
     }
@@ -3492,30 +3488,22 @@ public class LibvirtComputingResource extends ServerResourceBase implements Serv
         return nValue.getNodeValue();
     }
 
-    public void restoreVMSnapshotMetadata(String vmName, List<Ternary<String, Boolean, String>> vmsnapshots) {
+    public void restoreVMSnapshotMetadata(Domain dm, String vmName, List<Ternary<String, Boolean, String>> vmsnapshots) {
         s_logger.debug("Restoring the metadata of vm snapshots of vm " + vmName);
         for (Ternary<String, Boolean, String> vmsnapshot: vmsnapshots) {
-            s_logger.debug("Restoring vm snapshot " + vmsnapshot.first() + " on " + vmName + " with XML:\n " + vmsnapshot.third());
-            File tmpCfgFile = null;
+            String snapshotName = vmsnapshot.first();
+            Boolean isCurrent = vmsnapshot.second();
+            String snapshotXML = vmsnapshot.third();
+            s_logger.debug("Restoring vm snapshot " + snapshotName + " on " + vmName + " with XML:\n " + snapshotXML);
             try {
-                tmpCfgFile = File.createTempFile(vmName + "-", "cfg");
-                final PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(tmpCfgFile)));
-                out.println(vmsnapshot.third());
-                out.close();
-                String cfgFilePath = tmpCfgFile.getAbsolutePath();
-                String cmdvirsh = "virsh snapshot-create --redefine " + vmName + (vmsnapshot.second()? " --current ":" ") + cfgFilePath;
-                int cmdout = Script.runSimpleBashScriptForExitValue(cmdvirsh);
-                if (cmdout != 0) {
-                    s_logger.debug("Failed to restore vm snapshot " + vmsnapshot.first() + " with exit value:" + cmdout);
-                    continue;
+                int flags = 1; // VIR_DOMAIN_SNAPSHOT_CREATE_REDEFINE = 1
+                if (isCurrent) {
+                    flags += 2; // VIR_DOMAIN_SNAPSHOT_CREATE_CURRENT = 2
                 }
-            } catch (IOException e) {
-                s_logger.debug("Failed to restore vm snapshot " + vmsnapshot.first() + " on " + vmName);
+                dm.snapshotCreateXML(snapshotXML, flags);
+            } catch (LibvirtException e) {
+                s_logger.debug("Failed to restore vm snapshot " + snapshotName + ", continue");
                 continue;
-            } finally {
-                if (tmpCfgFile != null) {
-                    tmpCfgFile.delete();
-                }
             }
         }
     }

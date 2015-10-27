@@ -149,6 +149,7 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
                     libvirtComputingResource.cleanupDisk(disk);
                 }
             }
+
         } catch (final LibvirtException e) {
             s_logger.debug("Can't migrate domain: " + e.getMessage());
             result = e.getMessage();
@@ -163,6 +164,12 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
             result = e.getMessage();
         } finally {
             try {
+                if (dm != null && result != null) {
+                    // restore vm snapshots in case of failed migration
+                    if (vmsnapshots != null) {
+                        libvirtComputingResource.restoreVMSnapshotMetadata(dm, vmName, vmsnapshots);
+                    }
+                }
                 if (dm != null) {
                     if (dm.isPersistent() == 1) {
                         dm.undefine();
@@ -181,10 +188,6 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
         }
 
         if (result != null) {
-            // restore vm snapshots in case of failed migration
-            if (vmsnapshots != null) {
-                libvirtComputingResource.restoreVMSnapshotMetadata(vmName, vmsnapshots);
-            }
         } else {
             libvirtComputingResource.destroyNetworkRulesForVM(conn, vmName);
             for (final InterfaceDef iface : ifaces) {
