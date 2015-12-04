@@ -388,8 +388,13 @@
                     success: function(json) {
                         advZoneObjs = json.listzonesresponse ? json.listzonesresponse.zone : null;
                         if (advZoneObjs != null && advZoneObjs.length > 0) {
-                            sectionsToShow.push('vpc');
-                            sectionsToShow.push('vpnCustomerGateway');
+                            for (var i = 0; i < advZoneObjs.length; i++) {
+                                if (!advZoneObjs[i].securitygroupsenabled) {
+                                    sectionsToShow.push('vpc');
+                                    sectionsToShow.push('vpnCustomerGateway');
+                                    break;
+                                }
+                            }
 
                             //At the same time check if any advanced zone has securitygroupsenabled is true.
                             //If so, show Security Group section.
