@@ -96,6 +96,7 @@ updateSnapshotPolicy=15
 deleteSnapshotPolicies=15
 listSnapshotPolicies=15
 revertSnapshot=15
+createSnapshotFromVMSnapshot=15
 
 #### template commands
 createTemplate=15

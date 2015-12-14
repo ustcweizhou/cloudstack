@@ -28,7 +28,7 @@
             addRow: 'false',
             createForm: {
                 title: 'label.action.vmsnapshot.create',
-                desc: 'Please confirm that you want to take a snapshot of this instance. <br>Please notice that the instance will be paused during the snapshoting, and resumed after that.',
+                desc: 'message.action.vmsnapshot.create',
                 fields: {
                     name: {
                         label: 'label.name',
@@ -424,7 +424,7 @@
                     path: 'storage.volumes',
                     label: 'label.volumes'
                 }, {
-                    path: 'vmsnapshots',
+                    path: 'storage.vmsnapshots',
                     label: 'label.snapshots'
                 }, {
                     path: 'affinityGroups',

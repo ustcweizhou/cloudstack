@@ -407,6 +407,7 @@ under the License.
 'message.action.take.snapshot': '<fmt:message key="message.action.take.snapshot" />',
 'message.action.revert.snapshot': '<fmt:message key="message.action.revert.snapshot" />',
 'message.action.unmanage.cluster': '<fmt:message key="message.action.unmanage.cluster" />',
+'message.action.vmsnapshot.create': '<fmt:message key="message.action.vmsnapshot.create" />',
 'message.action.vmsnapshot.delete': '<fmt:message key="message.action.vmsnapshot.delete" />',
 'message.action.vmsnapshot.revert': '<fmt:message key="message.action.vmsnapshot.revert" />',
 'message.activate.project': '<fmt:message key="message.activate.project" />',

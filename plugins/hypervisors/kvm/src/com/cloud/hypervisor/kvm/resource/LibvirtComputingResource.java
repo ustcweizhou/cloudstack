@@ -3441,6 +3441,9 @@ public class LibvirtComputingResource extends ServerResourceBase implements Serv
     public List<Ternary<String, Boolean, String>> cleanVMSnapshotMetadata(Domain dm) throws LibvirtException {
         s_logger.debug("Cleaning the metadata of vm snapshots of vm " + dm.getName());
         List<Ternary<String, Boolean, String>> vmsnapshots = new ArrayList<Ternary<String, Boolean, String>>();
+        if (dm.snapshotNum() == 0) {
+            return vmsnapshots;
+        }
         String currentSnapshotName = null;
         try {
             DomainSnapshot snapshotCurrent = dm.snapshotCurrent();
