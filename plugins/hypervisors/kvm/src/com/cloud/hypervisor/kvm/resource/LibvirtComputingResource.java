@@ -17,11 +17,15 @@
 package com.cloud.hypervisor.kvm.resource;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -43,6 +47,9 @@ import java.util.regex.Pattern;
 
 import javax.ejb.Local;
 import javax.naming.ConfigurationException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.cloudstack.storage.to.PrimaryDataStoreTO;
 import org.apache.cloudstack.storage.to.VolumeObjectTO;
@@ -58,7 +65,14 @@ import org.libvirt.Domain;
 import org.libvirt.DomainBlockStats;
 import org.libvirt.DomainInfo;
 import org.libvirt.DomainInfo.DomainState;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 import org.libvirt.DomainInterfaceStats;
+import org.libvirt.DomainSnapshot;
 import org.libvirt.LibvirtException;
 import org.libvirt.NodeInfo;
 
@@ -134,6 +148,7 @@ import com.cloud.utils.ExecutionResult;
 import com.cloud.utils.NumbersUtil;
 import com.cloud.utils.Pair;
 import com.cloud.utils.PropertiesUtil;
+import com.cloud.utils.Ternary;
 import com.cloud.utils.exception.CloudRuntimeException;
 import com.cloud.utils.net.NetUtils;
 import com.cloud.utils.script.OutputInterpreter;
@@ -2723,6 +2738,22 @@ public class LibvirtComputingResource extends ServerResourceBase implements Serv
         DomainState state = null;
         Domain dm = null;
 
+        // delete the metadata of vm snapshots before stopping
+        try {
+            dm = conn.domainLookupByName(vmName);
+            cleanVMSnapshotMetadata(dm);
+        } catch (LibvirtException e) {
+            s_logger.debug("Failed to get vm :" + e.getMessage());
+        } finally {
+            try {
+                if (dm != null) {
+                    dm.free();
+                }
+            } catch (LibvirtException l) {
+                s_logger.trace("Ignoring libvirt error.", l);
+            }
+        }
+
         s_logger.debug("Try to stop the vm at first");
         String ret = stopVM(conn, vmName, false);
         if (ret == Script.ERR_TIMEOUT) {
@@ -3405,5 +3436,84 @@ public class LibvirtComputingResource extends ServerResourceBase implements Serv
             device = Script.runSimpleBashScript("rbd showmapped | grep \""+splitPoolImage[0]+"[ ]*"+splitPoolImage[1]+"\" | grep -o \"[^ ]*[ ]*$\"");
         }
         return device;
+    }
+
+    public List<Ternary<String, Boolean, String>> cleanVMSnapshotMetadata(Domain dm) throws LibvirtException {
+        s_logger.debug("Cleaning the metadata of vm snapshots of vm " + dm.getName());
+        List<Ternary<String, Boolean, String>> vmsnapshots = new ArrayList<Ternary<String, Boolean, String>>();
+        String currentSnapshotName = null;
+        try {
+            DomainSnapshot snapshotCurrent = dm.snapshotCurrent();
+            String snapshotXML = snapshotCurrent.getXMLDesc();
+            snapshotCurrent.free();
+            DocumentBuilder builder;
+            try {
+                builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+
+                InputSource is = new InputSource();
+                is.setCharacterStream(new StringReader(snapshotXML));
+                Document doc = builder.parse(is);
+                Element rootElement = doc.getDocumentElement();
+
+                currentSnapshotName = getTagValue("name", rootElement);
+            } catch (ParserConfigurationException e) {
+                s_logger.debug(e.toString());
+            } catch (SAXException e) {
+                s_logger.debug(e.toString());
+            } catch (IOException e) {
+                s_logger.debug(e.toString());
+            }
+        } catch (LibvirtException e) {
+            s_logger.debug("Fail to get the current vm snapshot for vm: " + dm.getName() + ", continue");
+        }
+        for (String snapshotName: dm.snapshotListNames()) {
+            DomainSnapshot snapshot = dm.snapshotLookupByName(snapshotName);
+            Boolean isCurrent = (currentSnapshotName != null && currentSnapshotName.equals(snapshotName)) ? true: false;
+            vmsnapshots.add(new Ternary<String, Boolean, String>(snapshotName, isCurrent, snapshot.getXMLDesc()));
+            snapshot.free();
+        }
+        for (String snapshotName: dm.snapshotListNames()) {
+            String cmdvirsh = "virsh snapshot-delete --metadata " + dm.getName() + " " + snapshotName;
+            int cmdout = Script.runSimpleBashScriptForExitValue(cmdvirsh);
+            if (cmdout != 0) {
+                s_logger.debug("Fail to delete the metadata of vm snapshot: " + snapshotName);
+            }
+        }
+        return vmsnapshots;
+    }
+
+    private static String getTagValue(String tag, Element eElement) {
+        NodeList nlList = eElement.getElementsByTagName(tag).item(0).getChildNodes();
+        Node nValue = nlList.item(0);
+
+        return nValue.getNodeValue();
+    }
+
+    public void restoreVMSnapshotMetadata(String vmName, List<Ternary<String, Boolean, String>> vmsnapshots) {
+        s_logger.debug("Restoring the metadata of vm snapshots of vm " + vmName);
+        for (Ternary<String, Boolean, String> vmsnapshot: vmsnapshots) {
+            s_logger.debug("Restoring vm snapshot " + vmsnapshot.first() + " on " + vmName + " with XML:\n " + vmsnapshot.third());
+            File tmpCfgFile = null;
+            try {
+                tmpCfgFile = File.createTempFile(vmName + "-", "cfg");
+                final PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(tmpCfgFile)));
+                out.println(vmsnapshot.third());
+                out.close();
+                String cfgFilePath = tmpCfgFile.getAbsolutePath();
+                String cmdvirsh = "virsh snapshot-create --redefine " + vmName + (vmsnapshot.second()? " --current ":" ") + cfgFilePath;
+                int cmdout = Script.runSimpleBashScriptForExitValue(cmdvirsh);
+                if (cmdout != 0) {
+                    s_logger.debug("Failed to restore vm snapshot " + vmsnapshot.first() + " with exit value:" + cmdout);
+                    continue;
+                }
+            } catch (IOException e) {
+                s_logger.debug("Failed to restore vm snapshot " + vmsnapshot.first() + " on " + vmName);
+                continue;
+            } finally {
+                if (tmpCfgFile != null) {
+                    tmpCfgFile.delete();
+                }
+            }
+        }
     }
 }

@@ -85,6 +85,8 @@ import com.cloud.agent.api.PlugNicCommand;
 import com.cloud.agent.api.PrepareForMigrationCommand;
 import com.cloud.agent.api.RebootAnswer;
 import com.cloud.agent.api.RebootCommand;
+import com.cloud.agent.api.RestoreVMSnapshotAnswer;
+import com.cloud.agent.api.RestoreVMSnapshotCommand;
 import com.cloud.agent.api.ScaleVmCommand;
 import com.cloud.agent.api.StartAnswer;
 import com.cloud.agent.api.StartCommand;
@@ -201,6 +203,7 @@ import com.cloud.vm.dao.UserVmDao;
 import com.cloud.vm.dao.UserVmDetailsDao;
 import com.cloud.vm.dao.VMInstanceDao;
 import com.cloud.vm.snapshot.VMSnapshotManager;
+import com.cloud.vm.snapshot.VMSnapshotVO;
 import com.cloud.vm.snapshot.dao.VMSnapshotDao;
 
 public class VirtualMachineManagerImpl extends ManagerBase implements VirtualMachineManager, VmWorkJobHandler, Listener, Configurable {
@@ -1697,6 +1700,18 @@ public class VirtualMachineManagerImpl extends ManagerBase implements VirtualMac
             final CheckVirtualMachineAnswer vmAnswer = (CheckVirtualMachineAnswer)answer;
             if (vmAnswer.getState() == PowerState.PowerOff) {
                 return false;
+            }
+        }
+
+        UserVmVO userVm = _userVmDao.findById(vm.getId());
+        if (userVm != null) {
+            List<VMSnapshotVO> vmSnapshots = _vmSnapshotDao.findByVm(vm.getId());
+            RestoreVMSnapshotCommand command = _vmSnapshotMgr.createRestoreCommand(userVm, vmSnapshots);
+            if (command != null) {
+                RestoreVMSnapshotAnswer restoreVMSnapshotAnswer = (RestoreVMSnapshotAnswer) _agentMgr.send(hostId, command);
+                if (restoreVMSnapshotAnswer == null || !restoreVMSnapshotAnswer.getResult()) {
+                    s_logger.warn("Unable to restore the vm snapshot from image file after migration to the VM: " + restoreVMSnapshotAnswer.getDetails());
+                }
             }
         }
 

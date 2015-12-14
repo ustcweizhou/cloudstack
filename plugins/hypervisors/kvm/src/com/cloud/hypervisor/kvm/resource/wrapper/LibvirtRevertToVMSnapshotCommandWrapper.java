@@ -66,6 +66,7 @@ public final class LibvirtRevertToVMSnapshotCommandWrapper extends CommandWrappe
                 return new RevertToVMSnapshotAnswer(cmd, false, "Cannot find vmSnapshot with name: " + cmd.getTarget().getSnapshotName());
 
             dm.revertToSnapshot(snapshot);
+            snapshot.free();
 
             if (!snapshotMemory) {
                 dm.destroy();

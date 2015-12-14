@@ -44,6 +44,7 @@ import com.cloud.hypervisor.kvm.resource.MigrateKVMAsync;
 import com.cloud.hypervisor.kvm.resource.VifDriver;
 import com.cloud.resource.CommandWrapper;
 import com.cloud.resource.ResourceWrapper;
+import com.cloud.utils.Ternary;
 
 @ResourceWrapper(handles =  MigrateCommand.class)
 public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCommand, Answer, LibvirtComputingResource> {
@@ -64,6 +65,7 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
         Domain destDomain = null;
         Connect conn = null;
         String xmlDesc = null;
+        List<Ternary<String, Boolean, String>> vmsnapshots = null;
         try {
             final LibvirtUtilitiesHelper libvirtUtilitiesHelper = libvirtComputingResource.getLibvirtUtilitiesHelper();
 
@@ -93,6 +95,9 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
             int xmlFlag = conn.getLibVirVersion() >= 1000000 ? 8 : 1; // 1000000 equals v1.0.0
 
             xmlDesc = dm.getXMLDesc(xmlFlag).replace(libvirtComputingResource.getPrivateIp(), command.getDestinationIp());
+
+            // delete the metadata of vm snapshots before migration
+            vmsnapshots = libvirtComputingResource.cleanVMSnapshotMetadata(dm);
 
             dconn = libvirtUtilitiesHelper.retrieveQemuConnection("qemu+tcp://" + command.getDestinationIp() + "/system");
 
@@ -176,6 +181,10 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
         }
 
         if (result != null) {
+            // restore vm snapshots in case of failed migration
+            if (vmsnapshots != null) {
+                libvirtComputingResource.restoreVMSnapshotMetadata(vmName, vmsnapshots);
+            }
         } else {
             libvirtComputingResource.destroyNetworkRulesForVM(conn, vmName);
             for (final InterfaceDef iface : ifaces) {
