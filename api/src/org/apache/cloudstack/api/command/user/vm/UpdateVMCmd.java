@@ -28,6 +28,7 @@ import org.apache.cloudstack.api.BaseCustomIdCmd;
 import org.apache.cloudstack.api.Parameter;
 import org.apache.cloudstack.api.ResponseObject.ResponseView;
 import org.apache.cloudstack.api.ServerApiException;
+import org.apache.cloudstack.api.BaseCmd.CommandType;
 import org.apache.cloudstack.api.response.GuestOSResponse;
 import org.apache.cloudstack.api.response.SecurityGroupResponse;
 import org.apache.cloudstack.api.response.UserVmResponse;
@@ -47,7 +48,7 @@ import java.util.List;
         "new properties to take effect. UpdateVirtualMachine does not first check whether the VM is stopped. " +
         "Therefore, stop the VM manually before issuing this call.", responseObject = UserVmResponse.class, responseView = ResponseView.Restricted, entityType = {VirtualMachine.class},
     requestHasSensitiveInfo = false, responseHasSensitiveInfo = true)
-public class UpdateVMCmd extends BaseCustomIdCmd {
+public class UpdateVMCmd extends BaseCustomIdCmd implements SecurityGroupAction {
     public static final Logger s_logger = Logger.getLogger(UpdateVMCmd.class.getName());
     private static final String s_name = "updatevirtualmachineresponse";
 
@@ -98,13 +99,26 @@ public class UpdateVMCmd extends BaseCustomIdCmd {
     @Parameter(name = ApiConstants.DETAILS, type = CommandType.MAP, description = "Details in key/value pairs.")
     protected Map<String, String> details;
 
+    @ACL
     @Parameter(name = ApiConstants.SECURITY_GROUP_IDS,
                type = CommandType.LIST,
                collectionType = CommandType.UUID,
                entityType = SecurityGroupResponse.class,
                description = "list of security group ids to be applied on the virtual machine. " +
-                   "In case no security groups are provided the VM is part of the default security group.")
+                       "In case no security groups are provided the VM is part of the default security group."
+            )
     private List<Long> securityGroupIdList;
+
+    @ACL
+    @Parameter(name = ApiConstants.SECURITY_GROUP_NAMES,
+               type = CommandType.LIST,
+               collectionType = CommandType.STRING,
+               entityType = SecurityGroupResponse.class,
+               description = "comma separated list of security groups names that going to be applied to the virtual machine. " +
+                       "Should be passed only when vm is created from a zone with Basic Network support. " +
+                       "Mutually exclusive with securitygroupids parameter"
+            )
+    private List<String> securityGroupNameList;
 
     /////////////////////////////////////////////////////
     /////////////////// Accessors ///////////////////////
@@ -158,6 +172,10 @@ public class UpdateVMCmd extends BaseCustomIdCmd {
 
     public List<Long> getSecurityGroupIdList() {
         return securityGroupIdList;
+    }
+
+    public List<String> getSecurityGroupNameList() {
+        return securityGroupNameList;
     }
 
     /////////////////////////////////////////////////////
