@@ -2454,9 +2454,23 @@ public class UserVmManagerImpl extends ManagerBase implements UserVmManager, Vir
             isDynamicallyScalable = vm.isDynamicallyScalable();
         }
 
-        // Get default guest network in Basic zone
+        Network defaultNetwork = null;
         DataCenterVO zone = _dcDao.findById(vm.getDataCenterId());
-        Network defaultNetwork = _networkModel.getExclusiveGuestNetwork(zone.getId());
+        if (zone.getNetworkType() == NetworkType.Basic) {
+            // Get default guest network in Basic zone
+            defaultNetwork = _networkModel.getExclusiveGuestNetwork(zone.getId());
+        } else {
+            if (zone.isSecurityGroupEnabled())  { // advanced zone with security groups
+                NicVO defaultNic = _nicDao.findDefaultNicForVM(vm.getId());
+                if (defaultNic != null) {
+                    defaultNetwork = _networkDao.findById(defaultNic.getNetworkId());
+                }
+            }
+        }
+
+        if (defaultNetwork == null || defaultNetwork.getGuestType() != Network.GuestType.Shared) {
+            throw new InvalidParameterValueException("Cannot find default network for vm:" + vm.getId());
+        }
 
         boolean isVmWare = (vm.getHypervisorType() == HypervisorType.VMware);
 
