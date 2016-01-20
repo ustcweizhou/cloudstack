@@ -944,26 +944,6 @@ def main(argv):
         metadata = CsVmMetadata('vmdata', config)
         metadata.process()
 
-    # Always run both CsAcl().process() methods
-    # They fill the base rules in config.fw[]
-    acls = CsAcl('networkacl', config)
-    acls.process()
-
-    acls = CsAcl('firewallrules', config)
-    acls.process()
-
-    fwd = CsForwardingRules("forwardingrules", config)
-    fwd.process()
-
-    vpns = CsSite2SiteVpn("site2sitevpn", config)
-    vpns.process()
-
-    rvpn = CsRemoteAccessVpn("remoteaccessvpn", config)
-    rvpn.process()
-
-    lb = CsLoadBalancer("loadbalancer", config)
-    lb.process()
-
     if process_file in ["cmd_line.json", "network_acl.json"]:
         logging.debug("Configuring networkacl")
         iptables_change = True
@@ -1005,9 +985,33 @@ def main(argv):
 
     # If iptable rules have changed, apply them.
     if iptables_change:
+        acls = CsAcl('networkacl', config)
+        acls.process()
+
+        acls = CsAcl('firewallrules', config)
+        acls.process()
+
+        fwd = CsForwardingRules("forwardingrules", config)
+        fwd.process()
+
+        vpns = CsSite2SiteVpn("site2sitevpn", config)
+        vpns.process()
+
+        rvpn = CsRemoteAccessVpn("remoteaccessvpn", config)
+        rvpn.process()
+
+        lb = CsLoadBalancer("loadbalancer", config)
+        lb.process()
+
         logging.debug("Configuring iptables rules")
         nf = CsNetfilters()
         nf.compare(config.get_fw())
+
+        logging.debug("Configuring iptables rules done ...saving rules")
+
+        # Save iptables configuration - will be loaded on reboot by the iptables-restore that is configured on /etc/rc.local
+        CsHelper.save_iptables("iptables-save", "/etc/iptables/router_rules.v4")
+        CsHelper.save_iptables("ip6tables-save", "/etc/iptables/router_rules.v6")
 
     red = CsRedundant(config)
     red.set()
@@ -1016,13 +1020,6 @@ def main(argv):
         logging.debug("Configuring static routes")
         static_routes = CsStaticRoutes("staticroutes", config)
         static_routes.process()
-
-    if iptables_change:
-        logging.debug("Configuring iptables rules done ...saving rules")
-
-        # Save iptables configuration - will be loaded on reboot by the iptables-restore that is configured on /etc/rc.local
-        CsHelper.save_iptables("iptables-save", "/etc/iptables/router_rules.v4")
-        CsHelper.save_iptables("ip6tables-save", "/etc/iptables/router_rules.v6")
 
 if __name__ == "__main__":
     main(sys.argv)
