@@ -371,6 +371,8 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
     public static final ConfigKey<Boolean> SystemVMUseLocalStorage = new ConfigKey<Boolean>(Boolean.class, "system.vm.use.local.storage", "Advanced", "false",
             "Indicates whether to use local storage pools or shared storage pools for system VMs.", false, ConfigKey.Scope.Zone, null);
+    public static final ConfigKey<Boolean> RemoveDedicatedIpRangesAfterRelease = new ConfigKey<Boolean>(Boolean.class, "remove.dedicated.ipranges.after.release", "Advanced", "true",
+            "Indicates whether to remove the dedicated virtual ip ranges after release it in DeleteAccount or DeleteDomain", false, ConfigKey.Scope.Global, null);
 
     private static final String DefaultForSystemVmsForPodIpRange = "0";
     private static final String DefaultVlanForPodIpRange = Vlan.UNTAGGED.toString();
@@ -5391,6 +5393,8 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                         for (DomainVlanMapVO map : maps) {
                             if (!releasePublicIpRange(map.getVlanDbId(), _accountMgr.getSystemUser().getId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM))) {
                                 throw new CloudRuntimeException("Failed to release domain specific virtual ip ranges for domain id=" + domainId);
+                            } else if (RemoveDedicatedIpRangesAfterRelease.value()) {
+                                deleteVlanAndPublicIpRange(_accountMgr.getSystemUser().getId(), map.getVlanDbId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM));
                             }
                         }
                     }
@@ -5417,6 +5421,8 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                         for (final AccountVlanMapVO map : maps) {
                             if (!releasePublicIpRange(map.getVlanDbId(), _accountMgr.getSystemUser().getId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM))) {
                                 throw new CloudRuntimeException("Failed to release account specific virtual ip ranges for account id=" + accountId);
+                            } else if (RemoveDedicatedIpRangesAfterRelease.value()) {
+                                deleteVlanAndPublicIpRange(_accountMgr.getSystemUser().getId(), map.getVlanDbId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM));
                             }
                         }
                     }
@@ -5688,6 +5694,6 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
     @Override
     public ConfigKey<?>[] getConfigKeys() {
-        return new ConfigKey<?>[] {SystemVMUseLocalStorage};
+        return new ConfigKey<?>[] {SystemVMUseLocalStorage, RemoveDedicatedIpRangesAfterRelease};
     }
 }
