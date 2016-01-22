@@ -2459,16 +2459,14 @@ public class UserVmManagerImpl extends ManagerBase implements UserVmManager, Vir
         if (zone.getNetworkType() == NetworkType.Basic) {
             // Get default guest network in Basic zone
             defaultNetwork = _networkModel.getExclusiveGuestNetwork(zone.getId());
-        } else {
-            if (zone.isSecurityGroupEnabled())  { // advanced zone with security groups
-                NicVO defaultNic = _nicDao.findDefaultNicForVM(vm.getId());
-                if (defaultNic != null) {
-                    defaultNetwork = _networkDao.findById(defaultNic.getNetworkId());
-                }
+        } else if (zone.isSecurityGroupEnabled()) {
+            NicVO defaultNic = _nicDao.findDefaultNicForVM(vm.getId());
+            if (defaultNic != null) {
+                defaultNetwork = _networkDao.findById(defaultNic.getNetworkId());
             }
         }
 
-        if (defaultNetwork == null || defaultNetwork.getGuestType() != Network.GuestType.Shared) {
+        if (defaultNetwork == null && (zone.getNetworkType() == NetworkType.Basic || zone.isSecurityGroupEnabled())) {
             throw new InvalidParameterValueException("Cannot find default network for vm:" + vm.getId());
         }
 
