@@ -61,6 +61,7 @@ import org.apache.cloudstack.network.topology.NetworkTopology;
 import org.apache.cloudstack.network.topology.NetworkTopologyContext;
 import org.apache.cloudstack.utils.identity.ManagementServerNode;
 import org.apache.cloudstack.utils.usage.UsageUtils;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import org.cloud.network.router.deployment.RouterDeploymentDefinitionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -188,6 +189,8 @@ import com.cloud.offerings.NetworkOfferingVO;
 import com.cloud.offerings.dao.NetworkOfferingDao;
 import com.cloud.resource.ResourceManager;
 import com.cloud.server.ConfigurationServer;
+import com.cloud.server.ResourceTag;
+import com.cloud.server.TaggedResourceService;
 import com.cloud.service.ServiceOfferingVO;
 import com.cloud.service.dao.ServiceOfferingDao;
 import com.cloud.storage.Storage.ProvisioningType;
@@ -378,6 +381,9 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
     protected CommandSetupHelper _commandSetupHelper;
     @Inject
     protected RouterDeploymentDefinitionBuilder _routerDeploymentManagerBuilder;
+
+    @Inject
+    protected TaggedResourceService _taggedResourceService;
 
     int _routerRamSize;
     int _routerCpuMHz;
@@ -1583,6 +1589,15 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
             // To limit DNS to the cidr range
             buf.append(" cidrsize=" + String.valueOf(cidrSize));
             buf.append(" dhcprange=" + dhcpRange);
+        }
+
+        List<? extends ResourceTag> resourceTags = _taggedResourceService.listByResourceTypeAndId(ResourceTag.ResourceObjectType.Network, guestNetworkId);
+        if (resourceTags != null && !resourceTags.isEmpty()) {
+            String tagStr = "";
+            for (ResourceTag tag : resourceTags) {
+                tagStr += tag.getKey() + "=" + tag.getValue() + " ";
+            }
+            buf.append(" resourcetags=" + Base64.encodeBase64String(tagStr.trim().getBytes()));
         }
 
         return buf;
