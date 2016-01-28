@@ -168,6 +168,17 @@ get_boot_params() {
 
 }
 
+get_resource_tag() {
+  local TAG="$1"
+  local VALUE=$(echo "$RESOURCETAGS" | sed 's, ,\n,g' | grep "^${TAG}=" | cut -d = -f 2)
+  
+  if [ -z "$VALUE" ] ; then
+     echo ""
+  else
+     echo "$VALUE"
+  fi
+}
+
 patch() {
   local PATCH_MOUNT=/media/cdrom
   local patchfile=$PATCH_MOUNT/cloud-scripts.tgz
@@ -678,7 +689,7 @@ setup_dnsmasq() {
   [ $ETH0_IP6 ] && DHCP_RANGE_IP6=$ETH0_IP6
   [ -z $DOMAIN ] && DOMAIN="cloudnine.internal"
   #removing the dnsmasq multiple ranges config file.
-  rm /etc/dnsmasq.d/multiple_ranges.conf
+  rm -f /etc/dnsmasq.d/multiple_ranges.conf
 
   #get the template
   cp /etc/dnsmasq.conf.tmpl /etc/dnsmasq.conf
@@ -787,6 +798,18 @@ setup_dnsmasq() {
   else
       echo 0 > /var/cache/cloud/dnsmasq_managed_lease
   fi
+  XNS="$(get_resource_tag 'domain-forward-ns')"
+  if [ -n "$XNS" ]
+	then
+         log_it "domain-forward-ns was set, adding upstream name servers..."
+         for ns in $(echo "$XNS" | sed 's/;/ /g') ; do
+            if [ -n "$ns" ] 
+            then
+               log_it "domain-forward-ns += $ns"
+               echo "server=/$DOMAIN/$ns" >> /etc/dnsmasq.conf
+            fi
+         done
+  fi    
 }
 
 setup_sshd(){
@@ -1566,6 +1589,9 @@ for i in $CMDLINE
         ;;
       advert_int)
         ADVERT_INT=$VALUE
+        ;;
+      resourcetags)
+        RESOURCETAGS=$(echo "$VALUE" | base64 -d)
         ;;
     esac
 done
