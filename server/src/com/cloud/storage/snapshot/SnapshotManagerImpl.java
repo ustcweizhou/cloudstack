@@ -264,6 +264,11 @@ public class SnapshotManagerImpl extends ManagerBase implements SnapshotManager,
             if (vm.getState() != State.Stopped && vm.getState() != State.Shutdowned) {
                 throw new InvalidParameterValueException("The VM the specified disk is attached to is not in the shutdown state.");
             }
+            // If target VM has associated VM snapshots then don't allow to revert from snapshot
+            List<VMSnapshotVO> vmSnapshots = _vmSnapshotDao.findByVm(instanceId);
+            if (vmSnapshots.size() > 0) {
+                throw new InvalidParameterValueException("Unable to revert snapshot for VM, please remove VM snapshots before reverting VM from snapshot");
+            }
         }
 
         SnapshotInfo snapshotInfo = snapshotFactory.getSnapshot(snapshotId, DataStoreRole.Image);

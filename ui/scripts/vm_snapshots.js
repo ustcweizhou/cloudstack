@@ -160,7 +160,7 @@
                             poll: pollAsyncJobResult
                         }
                     },
-                    restart: {
+                    revertToVMSnapshot: {
                         label: 'label.action.vmsnapshot.revert',
                         messages: {
                             confirm: function(args) {

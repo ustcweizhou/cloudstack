@@ -28,6 +28,7 @@
             addRow: 'false',
             createForm: {
                 title: 'label.action.vmsnapshot.create',
+                desc: 'Please confirm that you want to take a snapshot of this instance. <br>Please notice that the instance will be paused during the snapshoting, and resumed after that.',
                 fields: {
                     name: {
                         label: 'label.name',
