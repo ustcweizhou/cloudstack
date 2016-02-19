@@ -170,7 +170,7 @@ get_boot_params() {
 
 get_resource_tag() {
   local TAG="$1"
-  local VALUE=$(echo "$RESOURCETAGS" | sed 's, ,\n,g' | grep "^${TAG}=" | cut -d = -f 2)
+  local VALUE=$(cat /var/cache/cloud/resourcetags | grep "^${TAG}=" | tail -n 1 | cut -d = -f 2)
   
   if [ -z "$VALUE" ] ; then
      echo ""
@@ -798,7 +798,10 @@ setup_dnsmasq() {
   else
       echo 0 > /var/cache/cloud/dnsmasq_managed_lease
   fi
+
+  # Legacy tag key: domain-forward-ns
   XNS="$(get_resource_tag 'domain-forward-ns')"
+  [ -n "$XNS" ] && XNS="$(get_resource_tag 'cfg.dns.forward-ns')"
   if [ -n "$XNS" ]
 	then
          log_it "domain-forward-ns was set, adding upstream name servers..."
@@ -947,6 +950,15 @@ load_modules() {
  modprobe nf_conntrack_ftp
 }
 
+setup_haproxy() {
+  XRT="$(get_resource_tag 'cfg.lb.timeout')"
+  if [ -n "$XRT" -a -e /etc/haproxy/haproxy.cfg ] ; then
+     log_it "haproxy: chaning default timeout to: $XRT"
+     sed -i "s,^\([[:space:]]\+\)timeout client.*\$,\1timeout client $XRT,g" /etc/haproxy/haproxy.cfg
+     sed -i "s,^\([[:space:]]\+\)timeout server.*\$,\1timeout server $XRT,g" /etc/haproxy/haproxy.cfg
+  fi
+}
+
 setup_router() {
   log_it "Setting up virtual router system vm"
 
@@ -1008,6 +1020,7 @@ setup_router() {
   sed -i  /gateway/d /etc/hosts
   echo "$ETH0_IP $NAME" >> /etc/hosts
 
+  setup_haproxy
 
   enable_svc dnsmasq 1
   enable_svc haproxy 1
@@ -1101,6 +1114,7 @@ EOF
   sudo ip rule add from $VPCCIDR table static_route_back 2>/dev/null
 
   setup_vpc_apache2
+  setup_haproxy
 
   enable_svc dnsmasq 1
   enable_svc haproxy 1
@@ -1338,6 +1352,8 @@ setup_ilbvm() {
   cp /etc/iptables/iptables-ilbvm /etc/iptables/rules
   setup_sshd $ETH1_IP "eth1"
   
+  setup_haproxy
+
   enable_fwding 0
   enable_svc haproxy 1
   enable_irqbalance 1
@@ -1444,6 +1460,8 @@ CHEF_TMP_FILE=/tmp/cmdline.json
 COMMA="\t"
 echo -e "{\n\"type\": \"cmdline\"," > ${CHEF_TMP_FILE}
 echo -e "\n\"cmd_line\": {" >> ${CHEF_TMP_FILE}
+
+> /var/cache/cloud/resourcetags
 
 for i in $CMDLINE
   do
@@ -1592,6 +1610,9 @@ for i in $CMDLINE
         ;;
       resourcetags)
         RESOURCETAGS=$(echo "$VALUE" | base64 -d)
+        RESOURCETAGS="${RESOURCETAGS//[^a-z\.\ A-Z0-9_- =]/}"
+        RESOURCETAGS="${RESOURCETAGS// /$'\n'}"
+        echo "$RESOURCETAGS" > /var/cache/cloud/resourcetags
         ;;
     esac
 done

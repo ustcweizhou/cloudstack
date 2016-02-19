@@ -16,6 +16,26 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# Copied from etc/init.d/cloud-early-config
+get_resource_tag() {
+  local TAG="$1"
+  local VALUE=$(cat /var/cache/cloud/resourcetags | grep "^${TAG}=" | tail -n 1 | cut -d = -f 2)
+
+  if [ -z "$VALUE" ] ; then
+     echo ""
+  else
+     echo "$VALUE"
+  fi
+}
+
+# Perform resourcetags injection
+XTO="$(get_resource_tag 'cfg.lb.timeout')"
+if [ -n "$XTO" ] ; then
+  logger -t cloud "haproxy: changing default timeout to: $XTO"
+  sed -i "s,^\([[:space:]]\+\)timeout client.*\$,\1timeout client $XTO,g" /etc/haproxy/haproxy.cfg.new
+  sed -i "s,^\([[:space:]]\+\)timeout server.*\$,\1timeout server $XTO,g" /etc/haproxy/haproxy.cfg.new
+fi
+
 
 ret=0
 
