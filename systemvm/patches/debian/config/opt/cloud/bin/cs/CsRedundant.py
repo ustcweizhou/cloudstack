@@ -38,6 +38,7 @@ from CsProcess import CsProcess
 from CsApp import CsPasswdSvc
 from CsAddress import CsDevice
 from CsRoute import CsRoute
+from CsStaticRoutes import CsStaticRoutes
 import socket
 from time import sleep
 
@@ -296,7 +297,10 @@ class CsRedundant(object):
 
         self.bring_public_interfaces_up()
 
-        # ip route add default via $gw table Table_$dev proto static
+        logging.debug("Configuring static routes")
+        static_routes = CsStaticRoutes("staticroutes", self.config)
+        static_routes.process()
+
         cmd = "%s -C %s" % (self.CONNTRACKD_BIN, self.CONNTRACKD_CONF)
         CsHelper.execute("%s -c" % cmd)
         CsHelper.execute("%s -f" % cmd)
