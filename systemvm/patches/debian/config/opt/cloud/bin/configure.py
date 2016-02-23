@@ -73,6 +73,23 @@ class CsPassword(CsDataBag):
                 result = CsHelper.execute(update_command)
                 logging.debug("Update password server result ==> %s" % result)
 
+class CsResourceTags(CsDataBag):
+
+    RESOURCE_TAGS_FILE="/var/cache/cloud/resourcetags"
+
+    def process(self):
+        for item in self.dbag:
+            if item == "id":
+                continue
+            self.__update(self.dbag[item])
+
+    def __update(self, encodedtags):
+        if encodedtags != '':
+            tags_cmd = 'echo {TAGS} | base64 -d | sed "s, ,\\n,g" > {RESOURCE_TAGS_FILE}'.format(TAGS=encodedtags, RESOURCE_TAGS_FILE=self.RESOURCE_TAGS_FILE)
+            result = CsHelper.execute(tags_cmd)
+        else:
+            tags_cmd = '> {RESOURCE_TAGS_FILE}'.format(RESOURCE_TAGS_FILE=self.RESOURCE_TAGS_FILE)
+            result = CsHelper.execute(tags_cmd)
 
 class CsStaticRoutes(CsDataBag):
     
@@ -917,6 +934,14 @@ def main(argv):
     logging.basicConfig(filename=config.get_logger(),
                         level=config.get_level(),
                         format=config.get_format())
+
+    # Save resource tags
+    if process_file in ["cmd_line.json", "resource_tags.json"]:
+        logging.debug("Configuring Resource Tags")
+        resourcetags = CsResourceTags("resourcetags", config)
+        resourcetags.process()
+        if process_file in ["resource_tags.json"]:
+            return
 
     # Load stored ip adresses from disk to CsConfig()
     config.set_address()

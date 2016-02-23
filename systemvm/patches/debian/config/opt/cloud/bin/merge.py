@@ -24,6 +24,7 @@ import cs_ip
 import cs_guestnetwork
 import cs_cmdline
 import cs_vmp
+import cs_resourcetags
 import cs_network_acl
 import cs_firewallrules
 import cs_loadbalancer
@@ -129,6 +130,8 @@ class updateDataBag:
             dbag = self.process_vpnusers(self.db.getDataBag())
         elif self.qFile.type == 'staticroutes':
             dbag = self.process_staticroutes(self.db.getDataBag())
+        elif self.qFile.type == 'resourcetags':
+            dbag = self.process_resourcetags(self.db.getDataBag())
         else:
             logging.error("Error I do not know what to do with file of type %s", self.qFile.type)
             return
@@ -180,6 +183,9 @@ class updateDataBag:
 
     def processVMpassword(self, dbag):
         return cs_vmp.merge(dbag, self.qFile.data)
+
+    def process_resourcetags(self, dbag):
+        return cs_resourcetags.merge(dbag, self.qFile.data)
 
     def processForwardingRules(self, dbag):
         # to be used by both staticnat and portforwarding

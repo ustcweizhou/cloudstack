@@ -1,4 +1,3 @@
-//
 // Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
@@ -35,6 +34,7 @@ import com.cloud.agent.api.routing.LoadBalancerConfigCommand;
 import com.cloud.agent.api.routing.NetworkElementCommand;
 import com.cloud.agent.api.routing.RemoteAccessVpnCfgCommand;
 import com.cloud.agent.api.routing.SavePasswordCommand;
+import com.cloud.agent.api.routing.SaveResourceTagsCommand;
 import com.cloud.agent.api.routing.SetFirewallRulesCommand;
 import com.cloud.agent.api.routing.SetMonitorServiceCommand;
 import com.cloud.agent.api.routing.SetNetworkACLCommand;
@@ -74,6 +74,7 @@ public abstract class AbstractConfigItemFacade {
         flyweight.put(SetStaticNatRulesCommand.class, new SetStaticNatRulesConfigItem());
         flyweight.put(LoadBalancerConfigCommand.class, new LoadBalancerConfigItem());
         flyweight.put(SavePasswordCommand.class, new SavePasswordConfigItem());
+        flyweight.put(SaveResourceTagsCommand.class, new SaveResourceTagsItem());
         flyweight.put(DhcpEntryCommand.class, new DhcpEntryConfigItem());
         flyweight.put(CreateIpAliasCommand.class, new CreateIpAliasConfigItem());
         flyweight.put(DnsMasqConfigCommand.class, new DnsMasqConfigItem());

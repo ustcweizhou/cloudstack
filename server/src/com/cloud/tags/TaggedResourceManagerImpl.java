@@ -41,17 +41,21 @@ import com.cloud.event.ActionEvent;
 import com.cloud.event.EventTypes;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.exception.PermissionDeniedException;
+import com.cloud.exception.ResourceUnavailableException;
+import com.cloud.network.Network;
 import com.cloud.network.LBHealthCheckPolicyVO;
 import com.cloud.network.as.AutoScaleVmGroupVO;
 import com.cloud.network.as.AutoScaleVmProfileVO;
 import com.cloud.network.dao.IPAddressVO;
 import com.cloud.network.dao.LBStickinessPolicyVO;
 import com.cloud.network.dao.LoadBalancerVO;
+import com.cloud.network.dao.NetworkDao;
 import com.cloud.network.dao.NetworkVO;
 import com.cloud.network.dao.RemoteAccessVpnVO;
 import com.cloud.network.dao.Site2SiteCustomerGatewayVO;
 import com.cloud.network.dao.Site2SiteVpnConnectionVO;
 import com.cloud.network.dao.Site2SiteVpnGatewayVO;
+import com.cloud.network.router.VpcVirtualNetworkApplianceManager;
 import com.cloud.network.rules.FirewallRuleVO;
 import com.cloud.network.rules.PortForwardingRuleVO;
 import com.cloud.network.security.SecurityGroupVO;
@@ -142,7 +146,11 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
     DomainManager _domainMgr;
     @Inject
     AccountDao _accountDao;
+    @Inject
+    NetworkDao _networkDao;
 
+    @Inject
+    VpcVirtualNetworkApplianceManager _routerMgr;
 
     @Override
     public boolean configure(String name, Map<String, Object> params) throws ConfigurationException {
@@ -229,6 +237,8 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
         final Account caller = CallContext.current().getCallingAccount();
 
         final List<ResourceTag> resourceTags = new ArrayList<ResourceTag>(tags.size());
+        List<Network> networks = new ArrayList<Network>();
+        List<Long> networkIds = new ArrayList<Long>();
 
         Transaction.execute(new TransactionCallbackNoReturn() {
             @Override
@@ -265,6 +275,10 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
                             throw new InvalidParameterValueException("Value for the key " + key + " is either null or empty");
                         }
 
+                        if (ResourceObjectType.Network.equals(resourceType) && value.contains(" ")) {
+                            throw new InvalidParameterValueException("Value cannot include space for the key " + key);
+                        }
+
                         ResourceTagVO resourceTag = new ResourceTagVO(key, value, accountDomainPair.first(), accountDomainPair.second(), id, resourceType, customer, resourceUuid);
                         resourceTag = _resourceTagDao.persist(resourceTag);
                         resourceTags.add(resourceTag);
@@ -272,6 +286,23 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
                 }
             }
         });
+
+        if (ResourceObjectType.Network.equals(resourceType)) {
+            for (String resourceId : resourceIds) {
+                long id = getResourceId(resourceId, resourceType);
+                if (!networkIds.contains(id)) {
+                    networks.add(_networkDao.findById(id));
+                    networkIds.add(id);
+                }
+            }
+            for (Network network : networks) {
+                try {
+                    _routerMgr.saveResourceTagsToRouter(network);
+                } catch (ResourceUnavailableException ex) {
+                    s_logger.error("Resource tags have been saved into database, but failed to update resource tags in virtual router on network: " + network.getUuid(), ex);
+                }
+            }
+        }
 
         return resourceTags;
     }
@@ -312,6 +343,8 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
         List<? extends ResourceTag> resourceTags = _resourceTagDao.search(sc, null);
         ;
         final List<ResourceTag> tagsToRemove = new ArrayList<ResourceTag>();
+        List<Network> networks = new ArrayList<Network>();
+        List<Long> networkIds = new ArrayList<Long>();
 
         // Finalize which tags should be removed
         for (ResourceTag resourceTag : resourceTags) {
@@ -332,12 +365,20 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
                             canBeRemoved = true;
                         }
                         if (canBeRemoved) {
+                            if (ResourceObjectType.Network.equals(resourceType) && !networkIds.contains(resourceTag.getResourceId())) {
+                                networks.add(_networkDao.findById(resourceTag.getResourceId()));
+                                networkIds.add(resourceTag.getResourceId());
+                            }
                             tagsToRemove.add(resourceTag);
                             break;
                         }
                     }
                 }
             } else {
+                if (ResourceObjectType.Network.equals(resourceType) && !networkIds.contains(resourceTag.getResourceId())) {
+                    networks.add(_networkDao.findById(resourceTag.getResourceId()));
+                    networkIds.add(resourceTag.getResourceId());
+                }
                 tagsToRemove.add(resourceTag);
             }
         }
@@ -356,6 +397,16 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
                 }
             }
         });
+
+        if (ResourceObjectType.Network.equals(resourceType)) {
+            for (Network network : networks) {
+                try {
+                    _routerMgr.saveResourceTagsToRouter(network);
+                } catch (ResourceUnavailableException ex) {
+                    s_logger.error("Resource tags have been removed from database, but failed to update resource tags in virtual router on network: " + network.getUuid(), ex);
+                }
+            }
+        }
 
         return true;
     }

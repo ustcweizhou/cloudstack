@@ -53,6 +53,7 @@ import com.cloud.network.rules.FirewallRules;
 import com.cloud.network.rules.IpAssociationRules;
 import com.cloud.network.rules.LoadBalancingRules;
 import com.cloud.network.rules.PasswordToRouterRules;
+import com.cloud.network.rules.ResourceTagsToRouterRules;
 import com.cloud.network.rules.RuleApplier;
 import com.cloud.network.rules.RuleApplierWrapper;
 import com.cloud.network.rules.SshKeyToRouterRules;
@@ -315,6 +316,22 @@ public class BasicNetworkTopology implements NetworkTopology {
         final Long podId = null;
 
         final PasswordToRouterRules routerRules = new PasswordToRouterRules(network, nic, profile);
+
+        return applyRules(network, router, typeString, isPodLevelException, podId, failWhenDisconnect, new RuleApplierWrapper<RuleApplier>(routerRules));
+    }
+
+    @Override
+    public boolean saveResourceTagsToRouter(final Network network, final VirtualRouter router, final String encodedTags)
+            throws ResourceUnavailableException {
+
+        s_logger.debug("SAVE RESOURCE TAGS TO VIRTUAL ROUTER");
+
+        final String typeString = "save resource tags";
+        final boolean isPodLevelException = false;
+        final boolean failWhenDisconnect = false;
+        final Long podId = null;
+
+        final ResourceTagsToRouterRules routerRules = new ResourceTagsToRouterRules(network, encodedTags);
 
         return applyRules(network, router, typeString, isPodLevelException, podId, failWhenDisconnect, new RuleApplierWrapper<RuleApplier>(routerRules));
     }

@@ -54,6 +54,7 @@ import com.cloud.network.rules.NicPlugInOutRules;
 import com.cloud.network.rules.PasswordToRouterRules;
 import com.cloud.network.rules.PortForwardingRule;
 import com.cloud.network.rules.PrivateGatewayRules;
+import com.cloud.network.rules.ResourceTagsToRouterRules;
 import com.cloud.network.rules.SshKeyToRouterRules;
 import com.cloud.network.rules.StaticNat;
 import com.cloud.network.rules.StaticNatRule;
@@ -233,6 +234,17 @@ public class BasicNetworkVisitor extends NetworkTopologyVisitor {
 
         final Commands cmds = new Commands(Command.OnError.Stop);
         _commandSetupHelper.createPasswordCommand(router, profile, nicVo, cmds);
+
+        return _networkGeneralHelper.sendCommandsToRouter(router, cmds);
+    }
+
+    @Override
+    public boolean visit(final ResourceTagsToRouterRules tags) throws ResourceUnavailableException {
+        final VirtualRouter router = tags.getRouter();
+        final String encodedTags = tags.getEncodedTags();
+
+        final Commands cmds = new Commands(Command.OnError.Stop);
+        _commandSetupHelper.createResourceTagsCommand(router, encodedTags, cmds);
 
         return _networkGeneralHelper.sendCommandsToRouter(router, cmds);
     }

@@ -269,4 +269,10 @@ public class MockVpcVirtualNetworkApplianceManager extends ManagerBase implement
         // TODO Auto-generated method stub
         return false;
     }
+
+    public boolean saveResourceTagsToRouter(final Network network) throws ResourceUnavailableException {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
 }

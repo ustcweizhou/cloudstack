@@ -79,6 +79,8 @@ public interface NetworkTopology {
 
     boolean savePasswordToRouter(final Network network, final NicProfile nic, final VirtualMachineProfile profile, final VirtualRouter router) throws ResourceUnavailableException;
 
+    boolean saveResourceTagsToRouter(final Network network, final VirtualRouter router, final String encodedTags) throws ResourceUnavailableException;
+
     boolean saveSSHPublicKeyToRouter(final Network network, final NicProfile nic, final VirtualMachineProfile profile, final VirtualRouter router,
             final String sshPublicKey) throws ResourceUnavailableException;
 

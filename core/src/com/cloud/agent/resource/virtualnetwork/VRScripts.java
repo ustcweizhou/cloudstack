@@ -27,6 +27,7 @@ public class VRScripts {
     public final static String VM_METADATA_CONFIG = "vm_metadata.json";
     public final static String VM_DHCP_CONFIG = "vm_dhcp_entry.json";
     public final static String VM_PASSWORD_CONFIG = "vm_password.json";
+    public final static String RESOURCE_TAGS_CONFIG = "resource_tags.json";
     public static final String FORWARDING_RULES_CONFIG = "forwarding_rules.json";
     public static final String FIREWALL_RULES_CONFIG = "firewall_rules.json";
     public static final String VPN_USER_LIST_CONFIG = "vpn_user_list.json";

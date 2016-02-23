@@ -43,6 +43,7 @@ import com.cloud.agent.api.routing.LoadBalancerConfigCommand;
 import com.cloud.agent.api.routing.NetworkElementCommand;
 import com.cloud.agent.api.routing.RemoteAccessVpnCfgCommand;
 import com.cloud.agent.api.routing.SavePasswordCommand;
+import com.cloud.agent.api.routing.SaveResourceTagsCommand;
 import com.cloud.agent.api.routing.SetFirewallRulesCommand;
 import com.cloud.agent.api.routing.SetNetworkACLCommand;
 import com.cloud.agent.api.routing.SetPortForwardingRulesCommand;
@@ -534,6 +535,14 @@ public class CommandSetupHelper {
             cmds.addCommand("password", cmd);
         }
 
+    }
+
+    public void createResourceTagsCommand(final VirtualRouter router, final String encodedTags, final Commands cmds) {
+        final SaveResourceTagsCommand cmd = new SaveResourceTagsCommand(encodedTags);
+        cmd.setAccessDetail(NetworkElementCommand.ROUTER_IP, _routerControlHelper.getRouterControlIp(router.getId()));
+        cmd.setAccessDetail(NetworkElementCommand.ROUTER_NAME, router.getInstanceName());
+
+        cmds.addCommand("resourcetags", cmd);
     }
 
     public void createApplyStaticNatCommands(final List<? extends StaticNat> rules, final VirtualRouter router, final Commands cmds, final long guestNetworkId) {

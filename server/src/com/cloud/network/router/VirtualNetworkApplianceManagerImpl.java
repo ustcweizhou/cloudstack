@@ -190,6 +190,7 @@ import com.cloud.offerings.dao.NetworkOfferingDao;
 import com.cloud.resource.ResourceManager;
 import com.cloud.server.ConfigurationServer;
 import com.cloud.server.ResourceTag;
+import com.cloud.server.ResourceTag.ResourceObjectType;
 import com.cloud.server.TaggedResourceService;
 import com.cloud.service.ServiceOfferingVO;
 import com.cloud.service.dao.ServiceOfferingDao;
@@ -2716,4 +2717,32 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
     public boolean completeAggregatedExecution(final Network network, final List<DomainRouterVO> routers) throws AgentUnavailableException, ResourceUnavailableException {
         return aggregationExecution(Action.Finish, network, routers);
     }
+
+    @Override
+    public boolean saveResourceTagsToRouter(final Network network) throws ResourceUnavailableException {
+        final List<DomainRouterVO> routers = _routerDao.listByNetworkAndRole(network.getId(), Role.VIRTUAL_ROUTER);
+        if (routers == null || routers.isEmpty()) {
+            s_logger.debug("Can't find virtual router element in network " + network.getId());
+            return true;
+        }
+
+        final DataCenterVO dcVO = _dcDao.findById(network.getDataCenterId());
+        final NetworkTopology networkTopology = _networkTopologyContext.retrieveNetworkTopology(dcVO);
+
+        String tagStr = "";
+        final List<? extends ResourceTag> resourceTags = _taggedResourceService.listByResourceTypeAndId(ResourceObjectType.Network, network.getId());
+        if (resourceTags != null && !resourceTags.isEmpty()) {
+            for (ResourceTag tag : resourceTags) {
+                tagStr += tag.getKey() + "=" + tag.getValue() + " ";
+            }
+        }
+        final String encodedTags = Base64.encodeBase64String(tagStr.trim().getBytes());
+
+        boolean result = true;
+        for (final DomainRouterVO domainRouterVO : routers) {
+            result = result && networkTopology.saveResourceTagsToRouter(network, domainRouterVO, encodedTags);
+        }
+        return result;
+    }
+
 }

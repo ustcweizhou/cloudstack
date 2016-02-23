@@ -27,6 +27,7 @@ public abstract class ConfigBase {
     public static final String NETWORK_ACL = "networkacl";
     public static final String VM_METADATA = "vmdata";
     public static final String VM_PASSWORD = "vmpassword";
+    public static final String RESOURCE_TAGS = "resourcetags";
     public static final String FORWARDING_RULES = "forwardrules";
     public static final String FIREWALL_RULES = "firewallrules";
     public static final String VPN_USER_LIST = "vpnuserlist";
