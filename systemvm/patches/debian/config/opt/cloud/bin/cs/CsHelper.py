@@ -225,3 +225,15 @@ def copy(src, dest):
         logging.Error("Could not copy %s to %s" % (src, dest))
     else:
         logging.info("Copied %s to %s" % (src, dest))
+
+def get_resource_tag(key):
+    """ Get resource tag from /var/cache/cloud/resourcetags """
+    filename = '/var/cache/cloud/resourcetags'
+    if not os.path.isfile(filename):
+        logging.debug("File %s doesn't exist, so create" % filename)
+        open(filename, "w").close()
+    command = 'cat %s | grep "^%s=" | cut -d = -f 2' % (filename, key)
+    result = execute(command)
+    for line in result:
+        return line.strip()
+    return None

@@ -935,20 +935,27 @@ def main(argv):
                         level=config.get_level(),
                         format=config.get_format())
 
-    # Save resource tags
-    if process_file in ["cmd_line.json", "resource_tags.json"]:
-        logging.debug("Configuring Resource Tags")
-        resourcetags = CsResourceTags("resourcetags", config)
-        resourcetags.process()
-        if process_file in ["resource_tags.json"]:
-            return
-
     # Load stored ip adresses from disk to CsConfig()
     config.set_address()
 
     logging.debug("Configuring ip addresses")
     config.address().compare()
     config.address().process()
+
+    if process_file in ["cmd_line.json", "resource_tags.json"]:
+        logging.debug("Configuring Resource Tags")
+        resourcetags = CsResourceTags("resourcetags", config)
+        resourcetags.process()
+
+        logging.debug("dnsmasq: domain-forward-ns was set, adding upstream name servers...")
+        dns_forward_ns = CsHelper.get_resource_tag('cfg.dns.forward-ns')
+        if dns_forward_ns is None:
+            dns_forward_ns = '' # Default value
+        DOMAIN = CsHelper.execute('cat /etc/dnsmasq.conf |grep "^domain=" |tail -n 1 | cut -d = -f 2')[0]
+        CsHelper.execute('sed -i "/^server=/d" /etc/dnsmasq.conf')
+        for ns in dns_forward_ns.split(";"):
+            CsHelper.execute('echo "server=/%s/%s" >> /etc/dnsmasq.conf' % (DOMAIN, ns))
+        CsHelper.service("dnsmasq", "restart")
 
     if process_file in ["cmd_line.json", "guest_network.json"]:
         logging.debug("Configuring Guest Network")
@@ -1014,9 +1021,19 @@ def main(argv):
         dhcp = CsDhcp("dhcpentry", config)
         dhcp.process()
 
-    if process_file in ["cmd_line.json", "load_balancer.json"]:
+    if process_file in ["cmd_line.json", "load_balancer.json", "resource_tags.json"]:
         logging.debug("Configuring load balancer")
-        iptables_change = True
+        lb_timeout  = CsHelper.get_resource_tag('cfg.lb.timeout')
+        if lb_timeout is None:
+            lb_timeout = 50000 # Default value
+        logging.debug("haproxy: changing default timeout to: %s" % lb_timeout)
+        CsHelper.execute('sed -i "s/timeout client .*\\"/timeout client %s\\"/g" /etc/cloudstack/loadbalancer.json' % lb_timeout)
+        CsHelper.execute('sed -i "s/timeout server .*\\"/timeout server %s\\"/g" /etc/cloudstack/loadbalancer.json' % lb_timeout)
+        if process_file in ["resource_tags.json"]:
+            lb = CsLoadBalancer("loadbalancer", config)
+            lb.process()
+        else: 
+            iptables_change = True
 
     if process_file in ["cmd_line.json", "monitor_service.json"]:
         logging.debug("Configuring monitor service")
