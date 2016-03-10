@@ -5885,6 +5885,15 @@
                                     dns1: {
                                         label: 'label.dns'
                                     },
+                                    redundantstate: {
+                                        label: 'label.redundant.state'
+                                    },
+                                    version: {
+                                        label: 'label.template'
+                                    },
+                                    cloudstackversion: {
+                                        label: 'label.version'
+                                    },
                                     account: {
                                         label: 'label.account'
                                     },
