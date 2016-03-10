@@ -5908,6 +5908,12 @@
                                         dataType: "json",
                                         async: true,
                                         success: function(json) {
+                                            if (!json.listroutersresponse.router) {
+                                                args.response.success({
+                                                    data: null
+                                                });
+                                                return;
+                                            }
                                             for (var i = 0; i < json.listroutersresponse.router.length; i++) {
                                                 var item = json.listroutersresponse.router[i];
 
