@@ -1285,6 +1285,11 @@
                                         converter: cloudStack.converters.toBooleanText
 
                                     },
+
+                                    havingRedundantRouter: {
+                                        label: 'label.redundant.router.capability'
+                                    },
+
                                     restartrequired: {
                                         label: 'label.restart.required',
                                         converter: function(booleanValue) {
@@ -1414,6 +1419,30 @@
                                                 obj: jsonObj,
                                                 objType: "Network"
                                             });
+
+                                            var havingRedundantRouter = false;
+
+                                            var services = jsonObj.service;
+                                            if(services != null) {
+                                                for(var i = 0; i < services.length; i++) {
+                                                    var thisService = services[i];
+                                                    var capabilities = thisService.capability;
+                                                    if (thisService.name == "SourceNat") {
+                                                        if(capabilities != null) {
+                                                            for(var k = 0; k < capabilities.length; k++) {
+                                                                if (capabilities[k].name == "RedundantRouter" && capabilities[k].value == "true") {
+                                                                    havingRedundantRouter = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            $.extend(jsonObj, {
+                                                havingRedundantRouter: havingRedundantRouter ? _l('label.yes') : _l('label.no')
+                                            })
 
                                             args.response.success({
                                                 actionFilter: cloudStack.actionFilter.guestNetwork,
