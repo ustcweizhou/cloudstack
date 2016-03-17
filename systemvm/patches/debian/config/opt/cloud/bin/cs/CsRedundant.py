@@ -360,9 +360,10 @@ class CsRedundant(object):
                     continue
                 if(cmdline.get_type()=='router'):
                     str = "        %s brd %s dev %s\n" % (cmdline.get_guest_gw(), ip.get_broadcast(), ip.get_device())
-                else:
+                    lines.append(str)
+                elif CsDevice(ip.get_device(), self.config).waitfordevice(1):
                     str = "        %s brd %s dev %s\n" % (ip.get_gateway_cidr(), ip.get_broadcast(), ip.get_device())
-                lines.append(str)
+                    lines.append(str)
         return lines
 
     def check_is_up(self, device):
