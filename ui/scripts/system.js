@@ -9599,6 +9599,9 @@
                                 routerType: {
                                     label: 'label.type'
                                 },
+                                routernetworkname: {
+                                    label: 'label.network.name'
+                                },
                                 state: {
                                     converter: function (str) {
                                         // For localization
@@ -9663,6 +9666,10 @@
                                         json.listroutersresponse.router:[];
 
                                         $(items).map(function (index, item) {
+                                            var routernetworkname = item.vpcid == null ? item.guestnetworkname: item.vpcname
+                                            $.extend(item, {
+                                                routernetworkname: routernetworkname
+                                            });
                                             routers.push(item);
                                         });
 
@@ -9692,6 +9699,10 @@
                                                 json.listroutersresponse.router:[];
 
                                                 $(items).map(function (index, item) {
+                                                    var routernetworkname = item.vpcid == null ? item.guestnetworkname: item.vpcname
+                                                    $.extend(item, {
+                                                        routernetworkname: routernetworkname
+                                                    });
                                                     routers.push(item);
                                                 });
                                         }
