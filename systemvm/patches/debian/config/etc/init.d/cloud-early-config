@@ -1610,7 +1610,7 @@ for i in $CMDLINE
         ;;
       resourcetags)
         RESOURCETAGS=$(echo "$VALUE" | base64 -d)
-        RESOURCETAGS="${RESOURCETAGS//[^a-z\.\ A-Z0-9_- =]/}"
+        RESOURCETAGS="${RESOURCETAGS//[^-a-z\.\ A-Z0-9_- =]/}"
         RESOURCETAGS="${RESOURCETAGS// /$'\n'}"
         echo "$RESOURCETAGS" > /var/cache/cloud/resourcetags
         ;;
