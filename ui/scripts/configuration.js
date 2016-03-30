@@ -3403,6 +3403,9 @@
                                         label: 'label.specify.IP.ranges',
                                         converter: cloudStack.converters.toBooleanText
                                     },
+                                    havingRedundantRouter: {
+                                        label: 'label.redundant.router.capability'
+                                    },
                                     conservemode: {
                                         label: 'label.conserve.mode',
                                         converter: cloudStack.converters.toBooleanText
@@ -3444,9 +3447,30 @@
                                         async: true,
                                         success: function(json) {
                                             var item = json.listnetworkofferingsresponse.networkoffering[0];
+                                            var havingRedundantRouter = false;
+                                            var services = item.service;
+                                            if(services != null) {
+                                                for(var i = 0; i < services.length; i++) {
+                                                    var thisService = services[i];
+                                                    var capabilities = thisService.capability;
+                                                    if (thisService.name == "SourceNat") {
+                                                        if(capabilities != null) {
+                                                            for(var k = 0; k < capabilities.length; k++) {
+                                                                if (capabilities[k].name == "RedundantRouter" && capabilities[k].value == "true") {
+                                                                    havingRedundantRouter = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                        break;
+                                                    }
+                                                }
+                                            }
                                             args.response.success({
                                                 actionFilter: networkOfferingActionfilter,
                                                 data: $.extend(item, {
+                                                    havingRedundantRouter: havingRedundantRouter ? _l('label.yes') : _l('label.no'),
+
                                                     supportedServices: $.map(item.service, function(service) {
                                                         return service.name;
                                                     }).join(', '),
