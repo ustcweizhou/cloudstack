@@ -196,34 +196,7 @@ class CsRedundant(object):
             keepalived_conf.commit()
             CsHelper.service("keepalived", "restart")
         elif self.cl.is_master(): # Bring public interfaces up
-            dev = ''
-            ips = [ip for ip in self.address.get_ips() if ip.is_public()]
-            route = CsRoute()
-            for ip in ips:
-                if dev == ip.get_device():
-                    continue
-                dev = ip.get_device()
-                logging.info("Will proceed configuring device ==> %s" % dev)
-                cmd1 = "ip link show %s | grep 'state UP'" % dev
-                cmd2 = "ip link set %s up" % dev
-                if CsDevice(dev, self.config).waitfordevice():
-                    devUp = CsHelper.execute(cmd1)
-                    if devUp:
-                        continue
-                    CsHelper.execute(cmd2)
-                    logging.info("Bringing public interface %s up" % dev)
-
-                    try:
-                        gateway = ip.get_gateway()
-                        logging.info("Adding gateway ==> %s to device ==> %s" % (gateway, dev))
-                        if self.config.is_vpc() and dev in VPC_PUBLIC_INTERFACE:
-                            route.add_defaultroute(gateway)
-                        elif not self.config.is_vpc() and dev in NETWORK_PUBLIC_INTERFACE:
-                            route.add_defaultroute(gateway)
-                    except:
-                        logging.error("ERROR getting gateway from device %s" % dev)
-                else:
-                    logging.error("Device %s was not ready could not bring it up" % dev)
+            self.bring_public_interfaces_up()
 
     def release_lock(self):
         try:
@@ -321,27 +294,7 @@ class CsRedundant(object):
         self.set_lock()
         logging.debug("Setting router to master")
 
-        dev = ''
-        ips = [ip for ip in self.address.get_ips() if ip.is_public()]
-        route = CsRoute()
-        for ip in ips:
-            if dev == ip.get_device():
-                continue
-            dev = ip.get_device()
-            logging.info("Will proceed configuring device ==> %s" % dev)
-            cmd2 = "ip link set %s up" % dev
-            if CsDevice(dev, self.config).waitfordevice():
-                CsHelper.execute(cmd2)
-                logging.info("Bringing public interface %s up" % dev)
-
-                try:
-                    gateway = ip.get_gateway()
-                    logging.info("Adding gateway ==> %s to device ==> %s" % (gateway, dev))
-                    route.add_defaultroute(gateway)
-                except:
-                    logging.error("ERROR getting gateway from device %s" % dev)
-            else:
-                logging.error("Device %s was not ready could not bring it up" % dev)
+        self.bring_public_interfaces_up()
 
         # ip route add default via $gw table Table_$dev proto static
         cmd = "%s -C %s" % (self.CONNTRACKD_BIN, self.CONNTRACKD_CONF)
@@ -360,6 +313,36 @@ class CsRedundant(object):
         self.cl.save()
         self.release_lock()
         logging.info("Router switched to master mode")
+
+    def bring_public_interfaces_up(self):
+        dev = ''
+        ips = [ip for ip in self.address.get_ips() if ip.is_public()]
+        route = CsRoute()
+        for ip in ips:
+            if dev == ip.get_device():
+                continue
+            dev = ip.get_device()
+            logging.info("Will proceed configuring device ==> %s" % dev)
+            cmd1 = "ip link show %s | grep 'state UP'" % dev
+            cmd2 = "ip link set %s up" % dev
+            if CsDevice(dev, self.config).waitfordevice():
+                devUp = CsHelper.execute(cmd1)
+                if devUp:
+                    continue
+                CsHelper.execute(cmd2)
+                logging.info("Bringing public interface %s up" % dev)
+
+                try:
+                    gateway = ip.get_gateway()
+                    logging.info("Adding gateway ==> %s to device ==> %s" % (gateway, dev))
+                    if self.config.is_vpc() and dev in VPC_PUBLIC_INTERFACE:
+                        route.add_defaultroute(gateway)
+                    elif not self.config.is_vpc() and dev in NETWORK_PUBLIC_INTERFACE:
+                        route.add_defaultroute(gateway)
+                except:
+                    logging.error("ERROR getting gateway from device %s" % dev)
+            else:
+                logging.error("Device %s was not ready could not bring it up" % dev)
 
     def _collect_ignore_ips(self):
         """
