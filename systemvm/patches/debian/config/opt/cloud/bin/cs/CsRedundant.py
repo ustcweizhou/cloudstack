@@ -41,6 +41,8 @@ from CsRoute import CsRoute
 import socket
 from time import sleep
 
+VPC_PUBLIC_INTERFACE = ['eth1']
+NETWORK_PUBLIC_INTERFACE = ['eth2']
 
 class CsRedundant(object):
 
@@ -193,6 +195,35 @@ class CsRedundant(object):
         if not proc.find() or keepalived_conf.is_changed() or force_keepalived_restart:
             keepalived_conf.commit()
             CsHelper.service("keepalived", "restart")
+        elif self.cl.is_master(): # Bring public interfaces up
+            dev = ''
+            ips = [ip for ip in self.address.get_ips() if ip.is_public()]
+            route = CsRoute()
+            for ip in ips:
+                if dev == ip.get_device():
+                    continue
+                dev = ip.get_device()
+                logging.info("Will proceed configuring device ==> %s" % dev)
+                cmd1 = "ip link show %s | grep 'state UP'" % dev
+                cmd2 = "ip link set %s up" % dev
+                if CsDevice(dev, self.config).waitfordevice():
+                    devUp = CsHelper.execute(cmd1)
+                    if devUp:
+                        continue
+                    CsHelper.execute(cmd2)
+                    logging.info("Bringing public interface %s up" % dev)
+
+                    try:
+                        gateway = ip.get_gateway()
+                        logging.info("Adding gateway ==> %s to device ==> %s" % (gateway, dev))
+                        if self.config.is_vpc() and dev in VPC_PUBLIC_INTERFACE:
+                            route.add_defaultroute(gateway)
+                        elif not self.config.is_vpc() and dev in NETWORK_PUBLIC_INTERFACE:
+                            route.add_defaultroute(gateway)
+                    except:
+                        logging.error("ERROR getting gateway from device %s" % dev)
+                else:
+                    logging.error("Device %s was not ready could not bring it up" % dev)
 
     def release_lock(self):
         try:
