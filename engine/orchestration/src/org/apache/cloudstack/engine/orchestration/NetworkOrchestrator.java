@@ -2556,7 +2556,7 @@ public class NetworkOrchestrator extends ManagerBase implements NetworkOrchestra
 
         try {
             implementNetworkElementsAndResources(dest, context, network, offering);
-            setRestartRequired(network, true);
+            setRestartRequired(network, false);
             return true;
         } catch (final Exception ex) {
             s_logger.warn("Failed to implement network " + network + " elements and resources as a part of network restart due to ", ex);
