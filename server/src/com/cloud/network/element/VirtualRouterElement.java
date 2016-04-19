@@ -680,12 +680,12 @@ NetworkMigrationResponder, AggregatedCommandExecutor {
         boolean stopResult = true;
         boolean destroyResult = true;
         for (final DomainRouterVO router : routers) {
-            stopResult = stopResult && _routerMgr.stop(router, false, context.getCaller(), context.getAccount()) != null;
+            stopResult = stopResult && _routerMgr.stop(router, false, context.getCaller(), _accountMgr.getAccount(context.getCaller().getAccountId())) != null;
             if (!stopResult) {
                 s_logger.warn("Failed to stop virtual router element " + router + ", but would try to process clean up anyway.");
             }
             if (cleanup) {
-                destroyResult = destroyResult && _routerMgr.destroyRouter(router.getId(), context.getAccount(), context.getCaller().getId()) != null;
+                destroyResult = destroyResult && _routerMgr.destroyRouter(router.getId(), _accountMgr.getAccount(context.getCaller().getAccountId()), context.getCaller().getId()) != null;
                 if (!destroyResult) {
                     s_logger.warn("Failed to clean up virtual router element " + router);
                 }
@@ -888,7 +888,7 @@ NetworkMigrationResponder, AggregatedCommandExecutor {
         final List<DomainRouterVO> routers = _routerDao.listByElementId(elementId);
         boolean result = true;
         for (final DomainRouterVO router : routers) {
-            result = result && _routerMgr.destroyRouter(router.getId(), context.getAccount(), context.getCaller().getId()) != null;
+            result = result && _routerMgr.destroyRouter(router.getId(), _accountMgr.getAccount(context.getCaller().getAccountId()), context.getCaller().getId()) != null;
         }
         _vrProviderDao.remove(elementId);
 

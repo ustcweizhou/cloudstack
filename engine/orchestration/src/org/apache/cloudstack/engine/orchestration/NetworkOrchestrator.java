@@ -2213,7 +2213,7 @@ public class NetworkOrchestrator extends ManagerBase implements NetworkOrchestra
                 }
             }
             if (cleanupNeeded) {
-                cleanupResult = shutdownNetworkResources(network.getId(), context.getAccount(), context.getCaller().getId());
+                cleanupResult = shutdownNetworkResources(network.getId(), _accountDao.findById(context.getCaller().getAccountId()), context.getCaller().getId());
             }
         } catch (final Exception ex) {
             s_logger.warn("shutdownNetworkRules failed during the network " + network + " shutdown due to ", ex);
@@ -2254,7 +2254,7 @@ public class NetworkOrchestrator extends ManagerBase implements NetworkOrchestra
     @Override
     @DB
     public boolean destroyNetwork(final long networkId, final ReservationContext context, final boolean forced) {
-        final Account callerAccount = context.getAccount();
+        final Account callerAccount = _accountDao.findById(context.getCaller().getAccountId());
 
         NetworkVO network = _networksDao.findById(networkId);
         if (network == null) {
