@@ -242,9 +242,15 @@ class CsRedundant(object):
         CsHelper.service("xl2tpd", "stop")
         CsHelper.service("dnsmasq", "stop")
 
-        ips = [ip for ip in self.address.get_ips() if ip.needs_vrrp()]
-        for ip in ips:
-            CsPasswdSvc(ip.get_gateway()).stop()
+        if self.config.is_vpc():
+            ads = [o for o in self.address.get_ips() if o.needs_vrrp()]
+            for o in ads:
+                CsPasswdSvc(o.get_gateway()).stop()
+        else:
+            interfaces = [interface for interface in self.address.get_ips() if interface.is_guest()]
+            for interface in interfaces:
+                CsPasswdSvc(interface.get_ip()).stop()
+            CsPasswdSvc(self.cl.get_guest_gw()).stop()
 
         self.cl.set_fault_state()
         self.cl.save()
@@ -275,9 +281,16 @@ class CsRedundant(object):
         CsHelper.service("ipsec", "stop")
         CsHelper.service("xl2tpd", "stop")
 
-        ips = [ip for ip in self.address.get_ips() if ip.needs_vrrp()]
-        for ip in ips:
-            CsPasswdSvc(ip.get_gateway()).stop()
+        if self.config.is_vpc():
+            ads = [o for o in self.address.get_ips() if o.needs_vrrp()]
+            for o in ads:
+                CsPasswdSvc(o.get_gateway()).stop()
+        else:
+            interfaces = [interface for interface in self.address.get_ips() if interface.is_guest()]
+            for interface in interfaces:
+                CsPasswdSvc(interface.get_ip()).stop()
+            CsPasswdSvc(self.cl.get_guest_gw()).stop()
+
         CsHelper.service("dnsmasq", "stop")
 
         self.cl.set_master_state(False)
@@ -304,9 +317,15 @@ class CsRedundant(object):
         CsHelper.execute("%s -B" % cmd)
         CsHelper.service("ipsec", "restart")
         CsHelper.service("xl2tpd", "restart")
-        ads = [o for o in self.address.get_ips() if o.needs_vrrp()]
-        for o in ads:
-            CsPasswdSvc(o.get_gateway()).restart()
+        if self.config.is_vpc():
+            ads = [o for o in self.address.get_ips() if o.needs_vrrp()]
+            for o in ads:
+                CsPasswdSvc(o.get_gateway()).restart()
+        else:
+            interfaces = [interface for interface in self.address.get_ips() if interface.is_guest()]
+            for interface in interfaces:
+                CsPasswdSvc(interface.get_ip()).restart()
+            CsPasswdSvc(self.cl.get_guest_gw()).restart()
 
         CsHelper.service("dnsmasq", "restart")
         self.cl.set_master_state(True)
