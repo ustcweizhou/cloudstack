@@ -246,6 +246,7 @@ class CsRedundant(object):
             ads = [o for o in self.address.get_ips() if o.needs_vrrp()]
             for o in ads:
                 CsPasswdSvc(o.get_gateway()).stop()
+                CsPasswdSvc(o.get_ip()).stop()
         else:
             interfaces = [interface for interface in self.address.get_ips() if interface.is_guest()]
             for interface in interfaces:
@@ -285,6 +286,7 @@ class CsRedundant(object):
             ads = [o for o in self.address.get_ips() if o.needs_vrrp()]
             for o in ads:
                 CsPasswdSvc(o.get_gateway()).stop()
+                CsPasswdSvc(o.get_ip()).stop()
         else:
             interfaces = [interface for interface in self.address.get_ips() if interface.is_guest()]
             for interface in interfaces:
@@ -321,6 +323,7 @@ class CsRedundant(object):
             ads = [o for o in self.address.get_ips() if o.needs_vrrp()]
             for o in ads:
                 CsPasswdSvc(o.get_gateway()).restart()
+                CsPasswdSvc(o.get_ip()).restart()
         else:
             interfaces = [interface for interface in self.address.get_ips() if interface.is_guest()]
             for interface in interfaces:
