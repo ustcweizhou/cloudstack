@@ -1199,6 +1199,9 @@
                                 hiddenTabs.push('egressRules');
                             }
 
+                            if (!isAdmin() || args.context.networks[0].state == 'Allocated')
+                                hiddenTabs.push("networkRouters");
+
                             return hiddenTabs;
                         },
 
@@ -1448,6 +1451,97 @@
                                                 actionFilter: cloudStack.actionFilter.guestNetwork,
                                                 data: jsonObj
                                             });
+                                        }
+                                    });
+                                }
+                            },
+
+                            networkRouters: {
+                                title: 'Router Details',
+                                fields: [{
+                                    name: {
+                                        label: 'label.name'
+                                    }
+                                }, {
+                                    state: {
+                                        label: 'label.state'
+                                    },
+                                    hostname: {
+                                        label: 'label.host'
+                                    },
+                                    linklocalip: {
+                                        label: 'label.linklocal.ip'
+                                    },
+                                    isredundantrouter: {
+                                        label: 'label.redundant.router',
+                                        converter: function(booleanValue) {
+                                            if (booleanValue == true) {
+                                                return "Yes";
+                                            }
+                                            return "No";
+                                        }
+                                    },
+                                    redundantstate: {
+                                        label: 'label.redundant.state'
+                                    },
+                                    id: {
+                                        label: 'label.id'
+                                    },
+                                    serviceofferingname: {
+                                        label: 'label.service.offering'
+                                    },
+                                    zonename: {
+                                        label: 'label.zone'
+                                    },
+                                    gateway: {
+                                        label: 'label.gateway'
+                                    },
+                                    publicip: {
+                                        label: 'label.public.ip'
+                                    },
+                                    guestipaddress: {
+                                        label: 'label.guest.ip'
+                                    },
+                                    dns1: {
+                                        label: 'label.dns'
+                                    },
+                                    redundantstate: {
+                                        label: 'label.redundant.state'
+                                    },
+                                    version: {
+                                        label: 'label.template'
+                                    },
+                                    cloudstackversion: {
+                                        label: 'label.version'
+                                    },
+                                    account: {
+                                        label: 'label.account'
+                                    },
+                                    domain: {
+                                        label: 'label.domain'
+                                    }
+                                }],
+
+                                dataProvider: function(args) {
+                                    $.ajax({
+                                        url: createURL("listRouters&listAll=true&networkid=" + args.context.networks[0].id),
+                                        dataType: "json",
+                                        async: true,
+                                        success: function(json) {
+                                            if (!json.listroutersresponse.router) {
+                                                args.response.success({
+                                                    data: null
+                                                });
+                                                return;
+                                            }
+                                            for (var i = 0; i < json.listroutersresponse.router.length; i++) {
+                                                var item = json.listroutersresponse.router[i];
+
+                                                args.response.success({
+                                                    actionFilter: cloudStack.sections.system.routerActionFilter,
+                                                    data: item
+                                                });
+                                            }
                                         }
                                     });
                                 }
@@ -5773,7 +5867,7 @@
                             var hiddenTabs = [];
                             var isRouterOwner = isAdmin();
                             if (!isRouterOwner)
-                                hiddenTabs.push("router");
+                                hiddenTabs.push("vpcRouters");
                             return hiddenTabs;
                         },
 
@@ -5865,7 +5959,7 @@
                                     });
                                 }
                             },
-                            router: {
+                            vpcRouters: {
                                 title: 'label.vpc.router.details',
                                 fields: [{
                                     name: {
