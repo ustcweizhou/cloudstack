@@ -28,6 +28,8 @@ from CsRoute import CsRoute
 from CsRule import CsRule
 
 VRRP_TYPES = ['guest']
+VPC_PUBLIC_INTERFACE = ['eth1']
+NETWORK_PUBLIC_INTERFACE = ['eth2']
 
 class CsAddress(CsDataBag):
 
@@ -288,31 +290,39 @@ class CsIP:
         route = CsRoute()
         if not self.get_type() in ["control"]:
             route.add_table(self.dev)
-            
             CsRule(self.dev).addMark()
+
             self.check_is_up()
             self.set_mark()
             self.arpPing()
-            
+
             CsRpsrfs(self.dev).enable()
             self.post_config_change("add")
 
         '''For isolated/redundant and dhcpsrvr routers, call this method after the post_config is complete '''
         if not self.config.is_vpc():
             self.setup_router_control()
-        
-        if self.config.is_vpc() or self.cl.is_redundant():
-            # The code looks redundant here, but we actually have to cater for routers and
-            # VPC routers in a different manner. Please do not remove this block otherwise
-            # The VPC default route will be broken.
-            if self.get_type() in ["public"]:
-                gateway = str(address["gateway"])
-                route.add_defaultroute(gateway)
+
+
+        try:
+            if str(address["gateway"]) == "None":
+                raise ValueError
+        except (KeyError, ValueError):
+            logging.debug("IP %s was not provided with a gateway." % self.ip())
         else:
-            # once we start processing public ip's we need to verify there
-            # is a default route and add if needed
-            if(self.cl.get_gateway()):
-                route.add_defaultroute(self.cl.get_gateway())
+            if self.get_type() in ["public"]:
+                if self.config.is_vpc():
+                    main_public_nic = VPC_PUBLIC_INTERFACE
+                else:
+                    main_public_nic = NETWORK_PUBLIC_INTERFACE
+
+                if self.dev in main_public_nic:
+                    logging.debug("IP %s has the gateway %s that should be in the main routing table." % \
+                                  (self.ip(), address["gateway"]))
+                    route.add_defaultroute(address["gateway"])
+                else:
+                    logging.debug("IP %s has the gateway %s that is not intended for the main routing table." % \
+                                  (self.ip(), address["gateway"]))
 
     def check_is_up(self):
         """ Ensure device is up """

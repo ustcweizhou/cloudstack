@@ -302,13 +302,6 @@ class CsRedundant(object):
             if CsDevice(dev, self.config).waitfordevice():
                 CsHelper.execute(cmd2)
                 logging.info("Bringing public interface %s up" % dev)
-
-                try:
-                    gateway = ip.get_gateway()
-                    logging.info("Adding gateway ==> %s to device ==> %s" % (gateway, dev))
-                    route.add_defaultroute(gateway)
-                except:
-                    logging.error("ERROR getting gateway from device %s" % dev)
             else:
                 logging.error("Device %s was not ready could not bring it up" % dev)
 
