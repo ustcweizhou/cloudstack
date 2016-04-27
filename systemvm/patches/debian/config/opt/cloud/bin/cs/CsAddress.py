@@ -293,7 +293,10 @@ class CsIP:
             CsRule(self.dev).addMark()
 
             self.check_is_up()
-            self.set_mark()
+
+            if self.dnum != '0':
+                self.set_mark()
+
             self.arpPing()
 
             CsRpsrfs(self.dev).enable()
@@ -339,9 +342,10 @@ class CsIP:
 
 
     def set_mark(self):
-        cmd = "-A PREROUTING -i %s -m state --state NEW -j CONNMARK --set-xmark %s/0xffffffff" % \
-            (self.getDevice(), self.dnum)
-        self.fw.append(["mangle", "", cmd])
+        if self.get_type() in ['public']:
+            cmd = "-A PREROUTING -i %s -m state --state NEW -j CONNMARK --set-xmark %s/0xffffffff" % \
+                (self.getDevice(), self.dnum)
+            self.fw.append(["mangle", "", cmd])
 
     def get_type(self):
         """ Return the type of the IP
