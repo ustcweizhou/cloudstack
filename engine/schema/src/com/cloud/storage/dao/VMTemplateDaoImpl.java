@@ -352,6 +352,7 @@ public class VMTemplateDaoImpl extends GenericDaoBase<VMTemplateVO, Long> implem
 
         tmpltTypeHyperSearch2 = createSearchBuilder();
         tmpltTypeHyperSearch2.and("templateType", tmpltTypeHyperSearch2.entity().getTemplateType(), SearchCriteria.Op.EQ);
+        tmpltTypeHyperSearch2.and("state", tmpltTypeHyperSearch2.entity().getState(), SearchCriteria.Op.EQ);
         tmpltTypeHyperSearch2.and("hypervisorType", tmpltTypeHyperSearch2.entity().getHypervisorType(), SearchCriteria.Op.EQ);
         tmpltTypeHyperSearch2.and("templateName", tmpltTypeHyperSearch2.entity().getName(), SearchCriteria.Op.EQ);
 
@@ -869,6 +870,7 @@ public class VMTemplateDaoImpl extends GenericDaoBase<VMTemplateVO, Long> implem
     public VMTemplateVO findRoutingTemplate(HypervisorType hType, String templateName) {
         SearchCriteria<VMTemplateVO> sc = tmpltTypeHyperSearch2.create();
         sc.setParameters("templateType", TemplateType.ROUTING);
+        sc.setParameters("state", VirtualMachineTemplate.State.Active.toString());
         sc.setParameters("hypervisorType", hType);
         if (templateName != null) {
             sc.setParameters("templateName", templateName);
@@ -883,6 +885,7 @@ public class VMTemplateDaoImpl extends GenericDaoBase<VMTemplateVO, Long> implem
         } else {
             sc = tmpltTypeHyperSearch2.create();
             sc.setParameters("templateType", TemplateType.SYSTEM);
+            sc.setParameters("state", VirtualMachineTemplate.State.Active.toString());
             sc.setParameters("hypervisorType", hType);
             if (templateName != null) {
                 sc.setParameters("templateName", templateName);
