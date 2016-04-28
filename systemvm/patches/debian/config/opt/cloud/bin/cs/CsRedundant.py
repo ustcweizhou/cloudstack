@@ -365,10 +365,18 @@ class CsRedundant(object):
                         route.add_defaultroute(gateway)
                     elif not self.config.is_vpc() and dev in NETWORK_PUBLIC_INTERFACE:
                         route.add_defaultroute(gateway)
+                    route.add_route(dev, "default via %s" % gateway)
+                    route.add_route(dev, ip.get_network())
                 except:
                     logging.error("ERROR getting gateway from device %s" % dev)
             else:
                 logging.error("Device %s was not ready could not bring it up" % dev)
+
+        logging.info("Sending gratuitous ARP for each Public IP...")
+        for ip in ips:
+            address = ip.get_ip()
+            device = ip.get_device()
+            CsHelper.execute("arping -c 1 -U %s -I %s" % (address, device))
 
     def _collect_ignore_ips(self):
         """
