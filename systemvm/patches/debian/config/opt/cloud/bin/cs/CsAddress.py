@@ -286,12 +286,12 @@ class CsIP:
         route = CsRoute()
         if not self.get_type() in ["control"]:
             route.add_table(self.dev)
-            
-            CsRule(self.dev).addMark()
-            self.check_is_up()
 
-            if self.dnum != '0':
+            if self.dev != 'eth0':
+                CsRule(self.dev).addMark()
                 self.set_mark()
+
+            self.check_is_up()
 
             self.arpPing()
             
@@ -426,9 +426,6 @@ class CsIP:
                 ["filter", "", "-A FORWARD -i %s -o %s -m state --state NEW -j ACCEPT" % (self.dev, self.dev)])
             self.fw.append(
                 ["filter", "", "-A FORWARD -i eth0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT"])
-            self.fw.append(["mangle", "",
-                            "-A PREROUTING -i %s -m state --state NEW " % self.dev +
-                            "-j CONNMARK --set-xmark %s/0xffffffff" % self.dnum])
 
         self.fw.append(['', 'front', '-A FORWARD -j NETWORK_STATS'])
         self.fw.append(['', 'front', '-A INPUT -j NETWORK_STATS'])
