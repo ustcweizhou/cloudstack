@@ -95,3 +95,16 @@ class CsRoute:
         else:
             logging.warn("No default route found!")
             return False
+
+    def copy_routes_from_main(self, dev):
+        """ Copy routers from main table """
+        # ip route add dev eth2 table Table_eth2 throw 10.0.2.0/24
+        table = self.get_tablename(dev)
+        eth0Mask = CsHelper.execute("ip route list scope link dev eth0 | awk '{print $1}'")
+        cmd = "table %s throw %s proto static" % (table, eth0Mask[0])
+        self.set_route(cmd)
+
+        eth1Mask = CsHelper.execute("ip route list scope link dev eth1 | awk '{print $1}'")
+        cmd = "table %s throw %s proto static" % (table, eth1Mask[0])
+        self.set_route(cmd)
+

@@ -523,6 +523,8 @@ class CsIP:
             if "gateway" in self.address and self.address["gateway"] != "None":
                 route.add_route(self.dev, "default via %s" % self.address["gateway"])
             route.add_route(self.dev, str(self.address["network"]))
+            if not self.config.is_vpc() and self.is_public():
+                route.copy_routes_from_main(self.dev)
         elif method == "delete":
             logging.warn("delete route not implemented")
 

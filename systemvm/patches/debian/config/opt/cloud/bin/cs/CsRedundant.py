@@ -370,6 +370,8 @@ class CsRedundant(object):
                         route.add_defaultroute(gateway)
                     route.add_route(dev, "default via %s" % gateway)
                     route.add_route(dev, ip.get_network())
+                    if not self.config.is_vpc() and ip.is_public():
+                        route.copy_routes_from_main(dev)
                 except:
                     logging.error("ERROR getting gateway from device %s" % dev)
             else:
