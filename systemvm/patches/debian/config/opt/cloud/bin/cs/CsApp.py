@@ -69,14 +69,14 @@ class CsPasswdSvc():
 
     def start(self):
         proc = CsProcess(["dummy"])
-        if proc.grep("passwd_server_ip %s" % self.ip) == -1:
+        if proc.grep("passwd_server_ip %s " % self.ip) == -1:
             proc.start("/opt/cloud/bin/passwd_server_ip %s >> /var/log/cloud.log 2>&1" % self.ip, "&")
 
     def stop(self):
         proc = CsProcess(["Password Service"])
-        pid = proc.grep("passwd_server_ip %s" % self.ip)
+        pid = proc.grep("passwd_server_ip %s " % self.ip)
         proc.kill(pid)
-        pid = proc.grep("passwd_server_ip.py %s" % self.ip)
+        pid = proc.grep("passwd_server_ip.py %s$" % self.ip)
         proc.kill(pid)
         pid = proc.grep("8080,reuseaddr,fork,crnl,bind=%s" % self.ip)
         proc.kill(pid)
