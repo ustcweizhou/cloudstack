@@ -346,6 +346,10 @@ class CsRedundant(object):
     def bring_public_interfaces_up(self):
         dev = ''
         ips = [ip for ip in self.address.get_ips() if ip.is_public()]
+        guestIps = [ip for ip in self.address.get_ips() if ip.is_guest()]
+        guestDevs = []
+        for guestIp in guestIps:
+            guestDevs.append(guestIp.get_device())
         route = CsRoute()
         for ip in ips:
             if dev == ip.get_device():
@@ -370,8 +374,7 @@ class CsRedundant(object):
                         route.add_defaultroute(gateway)
                     route.add_route(dev, "default via %s" % gateway)
                     route.add_route(dev, ip.get_network())
-                    if not self.config.is_vpc() and ip.is_public():
-                        route.copy_routes_from_main(dev)
+                    route.copy_routes_from_main([dev], guestDevs)
                 except:
                     logging.error("ERROR getting gateway from device %s" % dev)
             else:
