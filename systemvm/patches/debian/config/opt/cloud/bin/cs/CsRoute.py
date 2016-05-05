@@ -103,6 +103,7 @@ class CsRoute:
             table = self.get_tablename(dev)
             for guestDev in guestDevs:
                 guestMask = CsHelper.execute("ip route list scope link dev %s | awk '{print $1}'" % guestDev)
-                cmd = "table %s throw %s proto static" % (table, guestMask[0])
-                self.set_route(cmd)
+                if len(guestMask) > 0:
+                    cmd = "table %s throw %s proto static" % (table, guestMask[0])
+                    self.set_route(cmd)
 
