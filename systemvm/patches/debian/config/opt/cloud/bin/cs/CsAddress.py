@@ -290,12 +290,12 @@ class CsIP:
         route = CsRoute()
         if not self.get_type() in ["control"]:
             route.add_table(self.dev)
-            CsRule(self.dev).addMark()
+
+            if self.dev != 'eth0':
+                CsRule(self.dev).addMark()
+                self.set_mark()
 
             self.check_is_up()
-
-            if self.dnum != '0':
-                self.set_mark()
 
             self.arpPing()
 
