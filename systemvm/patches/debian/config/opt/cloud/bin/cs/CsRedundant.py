@@ -384,6 +384,9 @@ class CsRedundant(object):
 
             up.append(device)
 
+            if not self.config.is_vpc() and ip.is_public():
+                route.copy_routes_from_main(device)
+
         logging.info("Adding all collected routes.")
         for route in routes:
             CsHelper.execute(add_route % route)
