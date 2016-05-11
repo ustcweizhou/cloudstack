@@ -332,7 +332,6 @@ class CsRedundant(object):
         self.release_lock()
         logging.info("Router switched to master mode")
 
-
     def _bring_public_interfaces_up(self):
         '''Brings up all public interfaces and adds routes to the
         relevant routing tables.
@@ -352,6 +351,11 @@ class CsRedundant(object):
             default_gateway = NETWORK_PUBLIC_INTERFACE
 
         public_ips = [ip for ip in self.address.get_ips() if ip.is_public()]
+
+        guestIps = [ip for ip in self.address.get_ips() if ip.is_guest()]
+        guestDevs = []
+        for guestIp in guestIps:
+            guestDevs.append(guestIp.get_device())
 
         for ip in public_ips:
             address = ip.get_ip()
@@ -384,8 +388,7 @@ class CsRedundant(object):
 
             up.append(device)
 
-            if not self.config.is_vpc() and ip.is_public():
-                route.copy_routes_from_main(device)
+            route.copy_routes_from_main([device], guestDevs)
 
         logging.info("Adding all collected routes.")
         for route in routes:
