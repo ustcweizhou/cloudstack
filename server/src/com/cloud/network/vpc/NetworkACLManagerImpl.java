@@ -21,11 +21,6 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import org.apache.cloudstack.context.CallContext;
-import org.apache.cloudstack.framework.messagebus.MessageBus;
-import org.apache.cloudstack.framework.messagebus.PublishScope;
-import org.apache.log4j.Logger;
-
 import com.cloud.configuration.ConfigurationManager;
 import com.cloud.event.ActionEvent;
 import com.cloud.event.EventTypes;
@@ -51,6 +46,11 @@ import com.cloud.utils.db.Transaction;
 import com.cloud.utils.db.TransactionCallback;
 import com.cloud.utils.db.TransactionStatus;
 import com.cloud.utils.exception.CloudRuntimeException;
+
+import org.apache.cloudstack.context.CallContext;
+import org.apache.cloudstack.framework.messagebus.MessageBus;
+import org.apache.cloudstack.framework.messagebus.PublishScope;
+import org.apache.log4j.Logger;
 
 public class NetworkACLManagerImpl extends ManagerBase implements NetworkACLManager {
     private static final Logger s_logger = Logger.getLogger(NetworkACLManagerImpl.class);
@@ -333,11 +333,11 @@ public class NetworkACLManagerImpl extends ManagerBase implements NetworkACLMana
     }
 
     @Override
-    public boolean revokeACLItemsForPrivateGw(PrivateGateway gateway) throws ResourceUnavailableException {
-
-        List<NetworkACLItemVO> aclItems = _networkACLItemDao.listByACL(gateway.getNetworkACLId());
+    public boolean revokeACLItemsForPrivateGw(final PrivateGateway gateway) throws ResourceUnavailableException {
+        final long networkACLId = gateway.getNetworkACLId();
+        final List<NetworkACLItemVO> aclItems = _networkACLItemDao.listByACL(networkACLId);
         if (aclItems.isEmpty()) {
-            s_logger.debug("Found no network ACL Items for private gateway  id=" + gateway.getId());
+            s_logger.debug("Found no network ACL Items for private gateway 'id=" + gateway.getId() + "'");
             return true;
         }
 
