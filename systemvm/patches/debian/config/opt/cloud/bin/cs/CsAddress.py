@@ -538,6 +538,19 @@ class CsIP:
             if "gateway" in self.address and self.address["gateway"] != "None":
                 route.add_route(self.dev, "default via %s" % self.address["gateway"])
             route.add_route(self.dev, str(self.address["network"]))
+            if self.is_public():
+                guestIps = [ip for ip in self.config.address().get_ips() if ip.is_guest()]
+                devs = []
+                for guestIp in guestIps:
+                    devs.append(guestIp.get_device())
+                route.copy_routes_from_main([self.dev], devs)
+            elif self.is_guest():
+                publicIps = [ip for ip in self.config.address().get_ips() if ip.is_public()]
+                devs = []
+                for publicIp in publicIps:
+                    devs.append(publicIp.get_device())
+                route.copy_routes_from_main(devs, [self.dev])
+
         elif method == "delete":
             logging.warn("delete route not implemented")
 
@@ -600,6 +613,11 @@ class CsIP:
 
     def is_public(self):
         if "nw_type" in self.address and self.address['nw_type'] in ['public']:
+            return True
+        return False
+
+    def is_guest(self):
+        if "nw_type" in self.address and self.address['nw_type'] in ['guest']:
             return True
         return False
 
