@@ -62,6 +62,7 @@ class CsPassword(CsDataBag):
         except IOError:
             logging.debug("File %s does not exist" % self.TOKEN_FILE)
 
+        updated = False
         ips_cmd = "ip addr show | grep inet | awk '{print $2}'"
         ips = CsHelper.execute(ips_cmd)
         for ip in ips:
@@ -72,6 +73,11 @@ class CsPassword(CsDataBag):
                 '-F "token={TOKEN}" >/dev/null 2>/dev/null &'.format(SERVER_IP=server_ip, VM_IP=vm_ip, PASSWORD=password, TOKEN=token)
                 result = CsHelper.execute(update_command)
                 logging.debug("Update password server result ==> %s" % result)
+                updated = True
+        if updated:
+            # remove vmpassword.json after updating password server
+            datafile = "/etc/cloudstack/vmpassword.json"
+            CsHelper.rm(datafile)
 
 
 class CsStaticRoutes(CsDataBag):
