@@ -496,6 +496,9 @@ class CsIP:
                 ["mangle", "", "-A VPN_STATS_%s -i %s -m mark --mark 0x524/0xffffffff" % (self.dev, self.dev)])
             self.fw.append(
                 ["", "front", "-A FORWARD -j NETWORK_STATS_%s" % self.dev])
+            self.fw.append(["mangle", "front",
+                            "-A POSTROUTING " +
+                            "-p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"])
 
         self.fw.append(["", "front", "-A FORWARD -j NETWORK_STATS"])
         self.fw.append(["", "front", "-A INPUT -j NETWORK_STATS"])
