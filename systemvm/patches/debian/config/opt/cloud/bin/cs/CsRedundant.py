@@ -336,7 +336,7 @@ class CsRedundant(object):
         else:
             default_gateway = NETWORK_PUBLIC_INTERFACE
 
-        public_ips = [ip for ip in self.address.get_ips() if ip.is_public()]
+        public_ips = [ip for ip in self.address.get_interfaces() if ip.is_public()]
 
         for ip in public_ips:
             address = ip.get_ip()
@@ -389,13 +389,13 @@ class CsRedundant(object):
         Redundant virtual routers should have the password server running.
         '''
         if self.config.is_vpc():
-            vrrp_addresses = [address for address in self.address.get_ips() if address.needs_vrrp()]
+            vrrp_addresses = [address for address in self.address.get_interfaces() if address.needs_vrrp()]
 
             for address in vrrp_addresses:
                 CsPasswdSvc(address.get_gateway()).restart()
                 CsPasswdSvc(address.get_ip()).restart()
         else:
-            guest_addresses = [address for address in self.address.get_ips() if address.is_guest()]
+            guest_addresses = [address for address in self.address.get_interfaces() if address.is_guest()]
 
             for address in guest_addresses:
                 CsPasswdSvc(address.get_ip()).restart()
