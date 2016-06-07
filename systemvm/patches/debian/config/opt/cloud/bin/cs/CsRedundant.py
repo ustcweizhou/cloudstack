@@ -335,7 +335,7 @@ class CsRedundant(object):
         guestDevs = []
         for guestIp in guestIps:
             guestDevs.append(guestIp.get_device())
-        route = CsRoute()
+        csroute = CsRoute()
 
         if self.config.is_vpc():
             default_gateway = VPC_PUBLIC_INTERFACE
@@ -384,7 +384,7 @@ class CsRedundant(object):
             address = ip.get_ip()
             device = ip.get_device()
             # copy ip router for guest devs to all public devs
-            route.copy_routes_from_main([device], guestDevs)
+            csroute.copy_routes_from_main([device], guestDevs)
             CsHelper.execute(arping % (address, device))
 
 

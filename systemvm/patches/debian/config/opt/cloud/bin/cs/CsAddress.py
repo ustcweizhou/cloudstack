@@ -539,13 +539,13 @@ class CsIP:
                 route.add_route(self.dev, "default via %s" % self.address["gateway"])
             route.add_route(self.dev, str(self.address["network"]))
             if self.is_public():
-                guestIps = [ip for ip in self.config.address().get_ips() if ip.is_guest()]
+                guestIps = [ip for ip in self.config.address().get_interfaces() if ip.is_guest()]
                 devs = []
                 for guestIp in guestIps:
                     devs.append(guestIp.get_device())
                 route.copy_routes_from_main([self.dev], devs)
             elif self.is_guest():
-                publicIps = [ip for ip in self.config.address().get_ips() if ip.is_public()]
+                publicIps = [ip for ip in self.config.address().get_interfaces() if ip.is_public()]
                 devs = []
                 for publicIp in publicIps:
                     devs.append(publicIp.get_device())
