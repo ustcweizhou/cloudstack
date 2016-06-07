@@ -398,7 +398,7 @@ class CsRedundant(object):
             guest_addresses = [address for address in self.address.get_ips() if address.is_guest()]
 
             for address in guest_addresses:
-            CsPasswdSvc(address.get_ip()).restart()
+                CsPasswdSvc(address.get_ip()).restart()
 
 
     def _collect_ignore_ips(self):
