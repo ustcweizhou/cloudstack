@@ -565,7 +565,7 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         if (stickinessSubRule != null && !destsAvailable) {
             s_logger.warn("Haproxy stickiness policy for lb rule: " + lbTO.getSrcIp() + ":" + lbTO.getSrcPort() + ": Not Applied, cause:  backends are unavailable");
         }
-        if (publicPort.equals(NetUtils.HTTP_PORT) && !keepAliveEnabled || httpbasedStickiness) {
+        if (publicPort.equals(NetUtils.HTTP_PORT) || httpbasedStickiness) {
             sb = new StringBuilder();
             sb.append("\t").append("mode http");
             result.add(sb.toString());
