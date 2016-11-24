@@ -580,11 +580,7 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
 
     private String generateStatsRule(final LoadBalancerConfigCommand lbCmd, final String ruleName, final String statsIp) {
         final StringBuilder rule = new StringBuilder("\nlisten ").append(ruleName).append(" ").append(statsIp).append(":").append(lbCmd.lbStatsPort);
-        // TODO DH: write test for this in both cases
-        if (!lbCmd.keepAliveEnabled) {
-            s_logger.info("Haproxy mode http enabled");
-            rule.append("\n\tmode http\n\toption httpclose");
-        }
+        rule.append("\n\tmode http\n\toption httpclose");
         rule.append("\n\tstats enable\n\tstats uri     ")
         .append(lbCmd.lbStatsUri)
         .append("\n\tstats realm   Haproxy\\ Statistics\n\tstats auth    ");
