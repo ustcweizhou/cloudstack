@@ -571,8 +571,13 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         }
         rule.append("\n\tstats enable\n\tstats uri     ")
         .append(lbCmd.lbStatsUri)
-        .append("\n\tstats realm   Haproxy\\ Statistics\n\tstats auth    ")
-        .append(lbCmd.lbStatsAuth);
+        .append("\n\tstats realm   Haproxy\\ Statistics\n\tstats auth    ");
+        if (networkLbTagsMap.get("cfg.lb.stats.auth") != null) {
+            rule.append(networkLbTagsMap.get("cfg.lb.stats.auth"));
+        } else {
+            rule.append(lbCmd.lbStatsAuth);
+        }
+
         rule.append("\n");
         final String result = rule.toString();
         if (s_logger.isDebugEnabled()) {
@@ -641,8 +646,12 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
                  */
                 final StringBuilder subRule =
                         new StringBuilder("\tstats enable\n\tstats uri     ").append(lbCmd.lbStatsUri)
-                        .append("\n\tstats realm   Haproxy\\ Statistics\n\tstats auth    ")
-                        .append(lbCmd.lbStatsAuth);
+                        .append("\n\tstats realm   Haproxy\\ Statistics\n\tstats auth    ");
+                if (networkLbTagsMap.get("cfg.lb.stats.auth") != null) {
+                    subRule.append(networkLbTagsMap.get("cfg.lb.stats.auth"));
+                } else {
+                    subRule.append(lbCmd.lbStatsAuth);
+                }
                 result.add(subRule.toString());
             }
 
