@@ -612,6 +612,10 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             dSection.set(7, "\tno option forceclose");
         }
 
+        if (networkLbTagsMap.get("cfg.lb.timeout") != null) {
+             dSection.set(9, "\ttimeout client     " + networkLbTagsMap.get("cfg.lb.timeout"));
+             dSection.set(10, "\ttimeout server     " + networkLbTagsMap.get("cfg.lb.timeout"));
+        }
         if (s_logger.isDebugEnabled()) {
             for (final String s : dSection) {
                 s_logger.debug("default section: " + s);

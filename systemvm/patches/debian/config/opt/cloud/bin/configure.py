@@ -1021,19 +1021,9 @@ def main(argv):
         dhcp = CsDhcp("dhcpentry", config)
         dhcp.process()
 
-    if process_file in ["cmd_line.json", "load_balancer.json", "resource_tags.json"]:
+    if process_file in ["cmd_line.json", "load_balancer.json"]:
         logging.debug("Configuring load balancer")
-        lb_timeout  = CsHelper.get_resource_tag('cfg.lb.timeout')
-        if lb_timeout is None:
-            lb_timeout = 50000 # Default value
-        logging.debug("haproxy: changing default timeout to: %s" % lb_timeout)
-        CsHelper.execute('sed -i "s/timeout client .*\\"/timeout client %s\\"/g" /etc/cloudstack/loadbalancer.json' % lb_timeout)
-        CsHelper.execute('sed -i "s/timeout server .*\\"/timeout server %s\\"/g" /etc/cloudstack/loadbalancer.json' % lb_timeout)
-        if process_file in ["resource_tags.json"]:
-            lb = CsLoadBalancer("loadbalancer", config)
-            lb.process()
-        else: 
-            iptables_change = True
+        iptables_change = True
 
     if process_file in ["cmd_line.json", "monitor_service.json"]:
         logging.debug("Configuring monitor service")
