@@ -1953,7 +1953,8 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
                     final List<LbHealthCheckPolicy> hcPolicyList = _lbMgr.getHealthCheckPolicies(lb.getId());
                     final Ip sourceIp = _networkModel.getPublicIpAddress(lb.getSourceIpAddressId()).getAddress();
                     final LbSslCert sslCert = _lbMgr.getLbSslCert(lb.getId());
-                    final LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, policyList, hcPolicyList, sourceIp, sslCert, lb.getLbProtocol());
+                    final List<ResourceTag> lbTags = _lbMgr.getLbTags(lb.getId());
+                    final LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, policyList, hcPolicyList, sourceIp, sslCert, lb.getLbProtocol(), lbTags);
                     lbRules.add(loadBalancing);
                 }
             }

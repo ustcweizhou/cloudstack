@@ -264,7 +264,7 @@ public class ElasticLoadBalancerManagerImpl extends ManagerBase implements Elast
                 List<LbHealthCheckPolicy> hcPolicyList = _lbMgr.getHealthCheckPolicies(lb.getId());
                 Ip sourceIp = _networkModel.getPublicIpAddress(lb.getSourceIpAddressId()).getAddress();
                 LbSslCert sslCert = _lbMgr.getLbSslCert(lb.getId());
-                LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, policyList, hcPolicyList, sourceIp, sslCert, lb.getLbProtocol());
+                LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, policyList, hcPolicyList, sourceIp, sslCert, lb.getLbProtocol(), null);
                 lbRules.add(loadBalancing);
             }
             return applyLBRules(elbVm, lbRules, network.getId());

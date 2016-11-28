@@ -33,6 +33,7 @@ import com.cloud.network.lb.LoadBalancingRule.LbDestination;
 import com.cloud.network.lb.LoadBalancingRule.LbHealthCheckPolicy;
 import com.cloud.network.lb.LoadBalancingRule.LbSslCert;
 import com.cloud.network.lb.LoadBalancingRule.LbStickinessPolicy;
+import com.cloud.server.ResourceTag;
 import com.cloud.utils.Pair;
 
 public class LoadBalancerTO {
@@ -41,6 +42,7 @@ public class LoadBalancerTO {
     int srcPort;
     String protocol;
     String lbProtocol;
+    ResourceTagTO[] lbTags;
     String algorithm;
     boolean revoked;
     boolean alreadyAdded;
@@ -152,6 +154,21 @@ public class LoadBalancerTO {
 
     public void setLbProtocol(String lbProtocol) {
         this.lbProtocol = lbProtocol;
+    }
+
+    public ResourceTagTO[] getLbTags() {
+        return this.lbTags;
+    }
+
+    public void setLbTags(List<ResourceTag> lbTags) {
+        if (lbTags == null) {
+            lbTags = new ArrayList<ResourceTag>();
+        }
+        this.lbTags = new ResourceTagTO[lbTags.size()];
+        int i = 0;
+        for (ResourceTag lbTag : lbTags) {
+            this.lbTags[i++] = new ResourceTagTO(lbTag);
+        }
     }
 
     public boolean isRevoked() {

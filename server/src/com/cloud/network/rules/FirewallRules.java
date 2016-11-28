@@ -36,6 +36,7 @@ import com.cloud.network.lb.LoadBalancingRulesManager;
 import com.cloud.network.router.VirtualRouter;
 import com.cloud.network.rules.FirewallRule.Purpose;
 import com.cloud.network.rules.LoadBalancerContainer.Scheme;
+import com.cloud.server.ResourceTag;
 import com.cloud.utils.net.Ip;
 
 public class FirewallRules extends RuleApplier {
@@ -70,8 +71,9 @@ public class FirewallRules extends RuleApplier {
                 final List<LbStickinessPolicy> policyList = lbMgr.getStickinessPolicies(lb.getId());
                 final List<LbHealthCheckPolicy> hcPolicyList = lbMgr.getHealthCheckPolicies(lb.getId());
                 final LbSslCert sslCert = lbMgr.getLbSslCert(lb.getId());
+                final List<ResourceTag> lbTags = lbMgr.getLbTags(lb.getId());
                 final Ip sourceIp = networkModel.getPublicIpAddress(lb.getSourceIpAddressId()).getAddress();
-                final LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, policyList, hcPolicyList, sourceIp, sslCert, lb.getLbProtocol());
+                final LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, policyList, hcPolicyList, sourceIp, sslCert, lb.getLbProtocol(), lbTags);
 
                 _loadbalancingRules.add(loadBalancing);
             }

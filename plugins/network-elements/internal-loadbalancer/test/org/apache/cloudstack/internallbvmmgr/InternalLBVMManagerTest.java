@@ -224,7 +224,7 @@ public class InternalLBVMManagerTest extends TestCase {
         boolean result = false;
         final List<DomainRouterVO> vms = new ArrayList<DomainRouterVO>();
         final List<LoadBalancingRule> rules = new ArrayList<LoadBalancingRule>();
-        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null);
+        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null, null);
 
         rules.add(rule);
         try {
@@ -243,7 +243,7 @@ public class InternalLBVMManagerTest extends TestCase {
         vms.add(vm);
 
         final List<LoadBalancingRule> rules = new ArrayList<LoadBalancingRule>();
-        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null);
+        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null, null);
 
         rules.add(rule);
         try {
@@ -261,7 +261,7 @@ public class InternalLBVMManagerTest extends TestCase {
         vms.add(vm);
 
         final List<LoadBalancingRule> rules = new ArrayList<LoadBalancingRule>();
-        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null);
+        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null, null);
 
         rules.add(rule);
         try {
@@ -279,7 +279,7 @@ public class InternalLBVMManagerTest extends TestCase {
         vms.add(vm);
 
         final List<LoadBalancingRule> rules = new ArrayList<LoadBalancingRule>();
-        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null);
+        final LoadBalancingRule rule = new LoadBalancingRule(null, null, null, null, null, null, null, null);
 
         rules.add(rule);
         try {

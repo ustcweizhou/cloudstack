@@ -55,8 +55,11 @@ import com.cloud.network.dao.RemoteAccessVpnVO;
 import com.cloud.network.dao.Site2SiteCustomerGatewayVO;
 import com.cloud.network.dao.Site2SiteVpnConnectionVO;
 import com.cloud.network.dao.Site2SiteVpnGatewayVO;
+import com.cloud.network.lb.LoadBalancingRulesManager;
+import com.cloud.network.lb.LoadBalancingRulesService;
 import com.cloud.network.router.VpcVirtualNetworkApplianceManager;
 import com.cloud.network.rules.FirewallRuleVO;
+import com.cloud.network.rules.LoadBalancerContainer.Scheme;
 import com.cloud.network.rules.PortForwardingRuleVO;
 import com.cloud.network.security.SecurityGroupVO;
 import com.cloud.network.security.SecurityGroupRuleVO;
@@ -151,6 +154,10 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
 
     @Inject
     VpcVirtualNetworkApplianceManager _routerMgr;
+    @Inject
+    LoadBalancingRulesManager _lbMgr;
+    @Inject
+    LoadBalancingRulesService _lbService;
 
     @Override
     public boolean configure(String name, Map<String, Object> params) throws ConfigurationException {
@@ -237,8 +244,6 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
         final Account caller = CallContext.current().getCallingAccount();
 
         final List<ResourceTag> resourceTags = new ArrayList<ResourceTag>(tags.size());
-        List<Network> networks = new ArrayList<Network>();
-        List<Long> networkIds = new ArrayList<Long>();
 
         Transaction.execute(new TransactionCallbackNoReturn() {
             @Override
@@ -287,22 +292,7 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
             }
         });
 
-        if (ResourceObjectType.Network.equals(resourceType)) {
-            for (String resourceId : resourceIds) {
-                long id = getResourceId(resourceId, resourceType);
-                if (!networkIds.contains(id)) {
-                    networks.add(_networkDao.findById(id));
-                    networkIds.add(id);
-                }
-            }
-            for (Network network : networks) {
-                try {
-                    _routerMgr.saveResourceTagsToRouter(network);
-                } catch (ResourceUnavailableException ex) {
-                    s_logger.error("Resource tags have been saved into database, but failed to update resource tags in virtual router on network: " + network.getUuid(), ex);
-                }
-            }
-        }
+        applyNetworkLoadBalancerResourceTags(resourceIds, resourceType, resourceTags, true);
 
         return resourceTags;
     }
@@ -343,8 +333,6 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
         List<? extends ResourceTag> resourceTags = _resourceTagDao.search(sc, null);
         ;
         final List<ResourceTag> tagsToRemove = new ArrayList<ResourceTag>();
-        List<Network> networks = new ArrayList<Network>();
-        List<Long> networkIds = new ArrayList<Long>();
 
         // Finalize which tags should be removed
         for (ResourceTag resourceTag : resourceTags) {
@@ -365,20 +353,12 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
                             canBeRemoved = true;
                         }
                         if (canBeRemoved) {
-                            if (ResourceObjectType.Network.equals(resourceType) && !networkIds.contains(resourceTag.getResourceId())) {
-                                networks.add(_networkDao.findById(resourceTag.getResourceId()));
-                                networkIds.add(resourceTag.getResourceId());
-                            }
                             tagsToRemove.add(resourceTag);
                             break;
                         }
                     }
                 }
             } else {
-                if (ResourceObjectType.Network.equals(resourceType) && !networkIds.contains(resourceTag.getResourceId())) {
-                    networks.add(_networkDao.findById(resourceTag.getResourceId()));
-                    networkIds.add(resourceTag.getResourceId());
-                }
                 tagsToRemove.add(resourceTag);
             }
         }
@@ -398,15 +378,7 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
             }
         });
 
-        if (ResourceObjectType.Network.equals(resourceType)) {
-            for (Network network : networks) {
-                try {
-                    _routerMgr.saveResourceTagsToRouter(network);
-                } catch (ResourceUnavailableException ex) {
-                    s_logger.error("Resource tags have been removed from database, but failed to update resource tags in virtual router on network: " + network.getUuid(), ex);
-                }
-            }
-        }
+        applyNetworkLoadBalancerResourceTags(resourceIds, resourceType, tagsToRemove, false);
 
         return true;
     }
@@ -414,5 +386,51 @@ public class TaggedResourceManagerImpl extends ManagerBase implements TaggedReso
     @Override
     public List<? extends ResourceTag> listByResourceTypeAndId(ResourceObjectType type, long resourceId) {
         return _resourceTagDao.listBy(resourceId, type);
+    }
+
+    private void applyNetworkLoadBalancerResourceTags(List<String> resourceIds, ResourceObjectType resourceType, List<ResourceTag> resourceTags, boolean add) {
+        if (ResourceObjectType.Network.equals(resourceType)) {
+            List<Network> networks = new ArrayList<Network>();
+            List<Long> networkIds = new ArrayList<Long>();
+            for (String resourceId : resourceIds) {
+                long id = getResourceId(resourceId, resourceType);
+                if (!networkIds.contains(id)) {
+                    networks.add(_networkDao.findById(id));
+                    networkIds.add(id);
+                }
+            }
+            boolean isLbChange = false;
+            for (ResourceTag tag : resourceTags) {
+                if (tag.getKey().startsWith("cfg.lb")) {
+                    isLbChange = true;
+                    break;
+                }
+            }
+            for (Network network : networks) {
+                try {
+                    _routerMgr.saveResourceTagsToRouter(network);
+                    if (isLbChange && !_lbMgr.applyLoadBalancersForNetwork(network.getId(), Scheme.Public)) {
+                        s_logger.warn("Failed to reapply Public load balancer rules as a part of network id=" + network.getId() + " resource tags " + (add? "add" : "remove"));
+                    }
+                } catch (ResourceUnavailableException ex) {
+                    s_logger.error("Resource tags have been " + (add ? "inserted into" : "removed from") + " database, but failed to update resource tags in virtual router on network: " + network.getUuid(), ex);
+                }
+            }
+        } else if (ResourceObjectType.LoadBalancer.equals(resourceType)) {
+            List<Long> lbRuleIds = new ArrayList<Long>();
+            for (String resourceId : resourceIds) {
+                long id = getResourceId(resourceId, resourceType);
+                if (!lbRuleIds.contains(id)) {
+                    lbRuleIds.add(id);
+                }
+            }
+            for (Long lbRuleId : lbRuleIds) {
+                try {
+                    _lbService.applyLoadBalancerConfig(lbRuleId);
+                } catch (ResourceUnavailableException ex) {
+                    s_logger.error("Resource tags have been " + (add ? "inserted into" : "removed from") + " database, but failed to update load balancer configurations in virtual router, load balancer id: " + lbRuleId, ex);
+                }
+            }
+        }
     }
 }

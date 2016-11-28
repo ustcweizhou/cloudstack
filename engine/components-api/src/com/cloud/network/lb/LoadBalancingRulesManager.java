@@ -29,6 +29,7 @@ import com.cloud.network.lb.LoadBalancingRule.LbStickinessPolicy;
 import com.cloud.network.rules.LbStickinessMethod;
 import com.cloud.network.rules.LoadBalancer;
 import com.cloud.network.rules.LoadBalancerContainer.Scheme;
+import com.cloud.server.ResourceTag;
 import com.cloud.user.Account;
 
 public interface LoadBalancingRulesManager {
@@ -49,6 +50,10 @@ public interface LoadBalancingRulesManager {
     List<LbHealthCheckPolicy> getHealthCheckPolicies(long lbId);
 
     LbSslCert getLbSslCert(long lbId);
+
+    List<ResourceTag> getLbTags(long lbId);
+
+    List<ResourceTag> getNetworkLbTags(long networkId);
 
     /**
      * Remove vm from all load balancers

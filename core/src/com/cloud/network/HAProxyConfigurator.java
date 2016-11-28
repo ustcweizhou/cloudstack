@@ -34,6 +34,7 @@ import com.cloud.agent.api.to.LoadBalancerTO;
 import com.cloud.agent.api.to.LoadBalancerTO.DestinationTO;
 import com.cloud.agent.api.to.LoadBalancerTO.StickinessPolicyTO;
 import com.cloud.agent.api.to.PortForwardingRuleTO;
+import com.cloud.agent.api.to.ResourceTagTO;
 import com.cloud.network.rules.LbStickinessMethod.StickinessMethodType;
 import com.cloud.utils.Pair;
 import com.cloud.utils.net.NetUtils;
@@ -49,6 +50,8 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         "\toption forwardfor", "\toption forceclose", "\ttimeout connect    5000", "\ttimeout client     50000", "\ttimeout server     50000"};
 
     private static String[] defaultListen = {"listen  vmops 0.0.0.0:9", "\toption transparent"};
+
+    private final HashMap<String, String> networkLbTagsMap = new HashMap<String, String>();
 
     @Override
     public String[] generateConfiguration(final List<PortForwardingRuleTO> fwRules) {
@@ -473,6 +476,14 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         final String publicPort = Integer.toString(lbTO.getSrcPort());
         final String algorithm = lbTO.getAlgorithm();
 
+        final ResourceTagTO[] lbTags = lbTO.getLbTags();
+        final HashMap<String, String> lbTagsMap = new HashMap<String, String>();
+        if (lbTags != null) {
+            for (ResourceTagTO lbTag: lbTags) {
+                lbTagsMap.put(lbTag.getKey(), lbTag.getValue());
+            }
+        }
+
         final List<String> result = new ArrayList<String>();
         // add line like this: "listen  65_37_141_30-80 65.37.141.30:80"
         sb = new StringBuilder();
@@ -572,6 +583,12 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
 
     @Override
     public String[] generateConfiguration(final LoadBalancerConfigCommand lbCmd) {
+        final ResourceTagTO[] lbTags = lbCmd.getLbTags();
+        if (lbTags != null) {
+            for (ResourceTagTO lbTag: lbTags) {
+                networkLbTagsMap.put(lbTag.getKey(), lbTag.getValue());
+            }
+        }
         final List<String> result = new ArrayList<String>();
         final List<String> gSection = Arrays.asList(globalSection);
         //        note that this is overwritten on the String in the static ArrayList<String>

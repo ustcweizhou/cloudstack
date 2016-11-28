@@ -50,6 +50,7 @@ import com.cloud.network.dao.LoadBalancerVO;
 import com.cloud.network.dao.NetworkDao;
 import com.cloud.network.dao.NetworkVO;
 import com.cloud.network.element.LoadBalancingServiceProvider;
+import com.cloud.server.TaggedResourceService;
 import com.cloud.user.Account;
 import com.cloud.user.AccountVO;
 import com.cloud.user.MockAccountManagerImpl;
@@ -64,6 +65,7 @@ public class UpdateLoadBalancerTest {
     private NetworkDao netDao = Mockito.mock(NetworkDao.class);
     private NetworkModel netModel = Mockito.mock(NetworkModel.class);
     private LoadBalancingServiceProvider lbServiceProvider= Mockito.mock(LoadBalancingServiceProvider.class);
+    private TaggedResourceService taggedResourceService = Mockito.mock(TaggedResourceService.class);
 
     private static long domainId = 5L;
     private static String accountName = "admin";
@@ -81,6 +83,7 @@ public class UpdateLoadBalancerTest {
         _lbMgr._lbDao = lbDao;
         _lbMgr._lbProviders = new ArrayList<LoadBalancingServiceProvider>();
         _lbMgr._lbProviders.add(lbServiceProvider);
+        _lbMgr._taggedResourceService = taggedResourceService;
 
         updateLbRuleCmd = new UpdateLoadBalancerRuleCmd();
 

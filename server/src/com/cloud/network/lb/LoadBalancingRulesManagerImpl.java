@@ -129,7 +129,9 @@ import com.cloud.network.rules.StickinessPolicy;
 import com.cloud.network.vpc.VpcManager;
 import com.cloud.offering.NetworkOffering;
 import com.cloud.projects.Project.ListProjectResourcesCriteria;
+import com.cloud.server.ResourceTag;
 import com.cloud.server.ResourceTag.ResourceObjectType;
+import com.cloud.server.TaggedResourceService;
 import com.cloud.service.dao.ServiceOfferingDao;
 import com.cloud.storage.dao.VMTemplateDao;
 import com.cloud.tags.ResourceTagVO;
@@ -259,6 +261,8 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
 
     @Inject
     NicSecondaryIpDao _nicSecondaryIpDao;
+    @Inject
+    protected TaggedResourceService _taggedResourceService;
 
     // Will return a string. For LB Stickiness this will be a json, for
     // autoscale this will be "," separated values
@@ -350,7 +354,8 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
          */
         List<LbStickinessPolicy> policyList = getStickinessPolicies(lb.getId());
         Ip sourceIp = getSourceIp(lb);
-        LoadBalancingRule rule = new LoadBalancingRule(lb, null, policyList, null, sourceIp, null, lb.getLbProtocol());
+        List<ResourceTag> lbTags = getLbTags(lb.getId());
+        LoadBalancingRule rule = new LoadBalancingRule(lb, null, policyList, null, sourceIp, null, lb.getLbProtocol(), lbTags);
         rule.setAutoScaleVmGroup(lbAutoScaleVmGroup);
 
         if (!isRollBackAllowedForProvider(lb)) {
@@ -544,8 +549,9 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
         List<LbStickinessPolicy> policyList = new ArrayList<LbStickinessPolicy>();
         policyList.add(new LbStickinessPolicy(cmd.getStickinessMethodName(), lbpolicy.getParams()));
         Ip sourceIp = getSourceIp(loadBalancer);
+        List<ResourceTag> lbTags = getLbTags(loadBalancer.getId());
         LoadBalancingRule lbRule =
-            new LoadBalancingRule(loadBalancer, getExistingDestinations(lbpolicy.getId()), policyList, null, sourceIp, null, loadBalancer.getLbProtocol());
+            new LoadBalancingRule(loadBalancer, getExistingDestinations(lbpolicy.getId()), policyList, null, sourceIp, null, loadBalancer.getLbProtocol(), lbTags);
         if (!validateLbRule(lbRule)) {
             throw new InvalidParameterValueException("Failed to create Stickiness policy: Validation Failed " + cmd.getLbRuleId());
         }
@@ -879,7 +885,8 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
                         // hashealtChecks
                         if (hcPolicyList != null && hcPolicyList.size() > 0) {
                             Ip sourceIp = getSourceIp(lb);
-                            LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, null, hcPolicyList, sourceIp, null, lb.getLbProtocol());
+                            List<ResourceTag> lbTags = getLbTags(lb.getId());
+                            LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, dstList, null, hcPolicyList, sourceIp, null, lb.getLbProtocol(), lbTags);
                             lbrules.add(loadBalancing);
                         }
                     }
@@ -1722,9 +1729,10 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
 
         // verify rule is supported by Lb provider of the network
         Ip sourceIp = getSourceIp(newRule);
+        List<ResourceTag> lbTags = getLbTags(newRule.getId());
         LoadBalancingRule loadBalancing =
             new LoadBalancingRule(newRule, new ArrayList<LbDestination>(), new ArrayList<LbStickinessPolicy>(), new ArrayList<LbHealthCheckPolicy>(), sourceIp, null,
-                lbProtocol);
+                lbProtocol, lbTags);
         if (!validateLbRule(loadBalancing)) {
             throw new InvalidParameterValueException("LB service provider cannot support this rule");
         }
@@ -1742,9 +1750,10 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
 
                 // verify rule is supported by Lb provider of the network
                 Ip sourceIp = getSourceIp(newRule);
+                List<ResourceTag> lbTags = getLbTags(newRule.getId());
                 LoadBalancingRule loadBalancing =
                     new LoadBalancingRule(newRule, new ArrayList<LbDestination>(), new ArrayList<LbStickinessPolicy>(), new ArrayList<LbHealthCheckPolicy>(), sourceIp,
-                        null, lbProtocol);
+                        null, lbProtocol, lbTags);
                 if (!validateLbRule(loadBalancing)) {
                     throw new InvalidParameterValueException("LB service provider cannot support this rule");
                 }
@@ -1851,7 +1860,8 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
         List<LbStickinessPolicy> policyList = getStickinessPolicies(lb.getId());
         Ip sourceIp = getSourceIp(lb);
         LbSslCert sslCert = getLbSslCert(lb.getId());
-        LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, null, policyList, null, sourceIp, sslCert, lb.getLbProtocol());
+        List<ResourceTag> lbTags = getLbTags(lb.getId());
+        LoadBalancingRule loadBalancing = new LoadBalancingRule(lb, null, policyList, null, sourceIp, sslCert, lb.getLbProtocol(), lbTags);
 
         if (_autoScaleVmGroupDao.isAutoScaleLoadBalancer(lb.getId())) {
             // Get the associated VmGroup
@@ -2040,6 +2050,28 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
             healthCheckPolicies.add(hDbPolicy);
         }
         return healthCheckPolicies;
+    }
+
+    @Override
+    public List<ResourceTag> getLbTags(long lbId) {
+        List<? extends ResourceTag> tags = _taggedResourceService.listByResourceTypeAndId(ResourceObjectType.LoadBalancer, lbId);
+        ArrayList<ResourceTag> lbTags = new ArrayList<ResourceTag>();
+        for (ResourceTag tag : tags) {
+            lbTags.add(tag);
+        }
+        return lbTags;
+    }
+
+    @Override
+    public List<ResourceTag> getNetworkLbTags(long networkId) {
+        List<? extends ResourceTag> tags = _taggedResourceService.listByResourceTypeAndId(ResourceObjectType.Network, networkId);
+        ArrayList<ResourceTag> lbTags = new ArrayList<ResourceTag>();
+        for (ResourceTag tag : tags) {
+            if (tag.getKey().startsWith("cfg.lb")) {
+                lbTags.add(tag);
+            }
+        }
+        return lbTags;
     }
 
     @Override

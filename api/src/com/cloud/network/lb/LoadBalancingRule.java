@@ -26,6 +26,7 @@ import com.cloud.network.as.Counter;
 import com.cloud.network.rules.FirewallRule;
 import com.cloud.network.rules.LoadBalancer;
 import com.cloud.network.rules.LoadBalancerContainer.Scheme;
+import com.cloud.server.ResourceTag;
 import com.cloud.utils.Pair;
 import com.cloud.utils.net.Ip;
 
@@ -38,6 +39,7 @@ public class LoadBalancingRule {
     private List<LbHealthCheckPolicy> healthCheckPolicies;
     private LbSslCert sslCert;
     private String lbProtocol;
+    private List<ResourceTag> lbTags;
 
     public LoadBalancingRule(LoadBalancer lb, List<LbDestination> destinations, List<LbStickinessPolicy> stickinessPolicies,
             List<LbHealthCheckPolicy> healthCheckPolicies, Ip sourceIp) {
@@ -49,7 +51,7 @@ public class LoadBalancingRule {
     }
 
     public LoadBalancingRule(LoadBalancer lb, List<LbDestination> destinations, List<LbStickinessPolicy> stickinessPolicies,
-            List<LbHealthCheckPolicy> healthCheckPolicies, Ip sourceIp, LbSslCert sslCert, String lbProtocol) {
+            List<LbHealthCheckPolicy> healthCheckPolicies, Ip sourceIp, LbSslCert sslCert, String lbProtocol, List<ResourceTag> lbTags) {
         this.lb = lb;
         this.destinations = destinations;
         this.stickinessPolicies = stickinessPolicies;
@@ -57,6 +59,7 @@ public class LoadBalancingRule {
         this.sourceIp = sourceIp;
         this.sslCert = sslCert;
         this.lbProtocol = lbProtocol;
+        this.lbTags = lbTags;
     }
 
     public long getId() {
@@ -105,6 +108,10 @@ public class LoadBalancingRule {
 
     public String getLbProtocol() {
         return this.lbProtocol;
+    }
+
+    public List<ResourceTag> getLbTags() {
+        return this.lbTags;
     }
 
     public FirewallRule.Purpose getPurpose() {

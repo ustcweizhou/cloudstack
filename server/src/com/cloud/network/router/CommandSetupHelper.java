@@ -92,6 +92,7 @@ import com.cloud.network.dao.VpnUserDao;
 import com.cloud.network.lb.LoadBalancingRule;
 import com.cloud.network.lb.LoadBalancingRule.LbDestination;
 import com.cloud.network.lb.LoadBalancingRule.LbStickinessPolicy;
+import com.cloud.network.lb.LoadBalancingRulesManager;
 import com.cloud.network.rules.FirewallRule;
 import com.cloud.network.rules.FirewallRule.Purpose;
 import com.cloud.network.rules.FirewallRuleVO;
@@ -179,6 +180,8 @@ public class CommandSetupHelper {
 
     @Inject
     private RouterControlHelper _routerControlHelper;
+    @Inject
+    private LoadBalancingRulesManager _lbMgr;
 
     @Autowired
     @Qualifier("networkHelper")
@@ -311,6 +314,7 @@ public class CommandSetupHelper {
             final List<LbStickinessPolicy> stickinessPolicies = rule.getStickinessPolicies();
             final LoadBalancerTO lb = new LoadBalancerTO(uuid, srcIp, srcPort, protocol, algorithm, revoked, false, inline, destinations, stickinessPolicies);
             lb.setLbProtocol(lb_protocol);
+            lb.setLbTags(rule.getLbTags());
             lbs[i++] = lb;
         }
         String routerPublicIp = null;
@@ -342,6 +346,7 @@ public class CommandSetupHelper {
         cmd.lbStatsUri = _configDao.getValue(Config.NetworkLBHaproxyStatsUri.key());
         cmd.lbStatsAuth = _configDao.getValue(Config.NetworkLBHaproxyStatsAuth.key());
         cmd.lbStatsPort = _configDao.getValue(Config.NetworkLBHaproxyStatsPort.key());
+        cmd.setLbTags(_lbMgr.getNetworkLbTags(guestNetwork.getId()));
 
         cmd.setAccessDetail(NetworkElementCommand.ROUTER_IP, _routerControlHelper.getRouterControlIp(router.getId()));
         cmd.setAccessDetail(NetworkElementCommand.ROUTER_GUEST_IP, _routerControlHelper.getRouterIpInNetwork(guestNetworkId, router.getId()));

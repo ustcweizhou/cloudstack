@@ -19,14 +19,20 @@
 
 package com.cloud.agent.api.routing;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.cloud.agent.api.to.LoadBalancerTO;
 import com.cloud.agent.api.to.NicTO;
+import com.cloud.agent.api.to.ResourceTagTO;
+import com.cloud.server.ResourceTag;
 
 /**
  * LoadBalancerConfigCommand sends the load balancer configuration
  */
 public class LoadBalancerConfigCommand extends NetworkElementCommand {
     LoadBalancerTO[] loadBalancers;
+    ResourceTagTO[] lbTags;
     public String lbStatsVisibility = "guest-network";
     public String lbStatsPublicIP; /* load balancer listen on this ips for stats */
     public String lbStatsPrivateIP; /* load balancer listen on this ips for stats */
@@ -71,5 +77,20 @@ public class LoadBalancerConfigCommand extends NetworkElementCommand {
 
     public Long getVpcId() {
         return vpcId;
+    }
+
+    public ResourceTagTO[] getLbTags() {
+        return lbTags;
+    }
+
+    public void setLbTags(List<ResourceTag> lbTags) {
+        if (lbTags == null) {
+            lbTags = new ArrayList<ResourceTag>();
+        }
+        this.lbTags = new ResourceTagTO[lbTags.size()];
+        int i = 0;
+        for (ResourceTag lbTag : lbTags) {
+            this.lbTags[i++] = new ResourceTagTO(lbTag);
+        }
     }
 }
