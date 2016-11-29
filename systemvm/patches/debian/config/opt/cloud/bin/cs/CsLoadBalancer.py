@@ -50,8 +50,11 @@ class CsLoadBalancer(CsDataBag):
                 logging.debug("CsLoadBalancer:: will restart HAproxy!")
                 CsHelper.service("haproxy", "restart")
             else:
+                default_action = CsHelper.get_resource_tag('cfg.lb.default.action')
+                if default_action is None or default_action not in [ "restart", "reload" ]:
+                    default_action = "reload"
                 logging.debug("CsLoadBalancer:: will reload HAproxy!")
-                CsHelper.service("haproxy", "reload")
+                CsHelper.service("haproxy", default_action)
 
         add_rules = self.dbag['config'][0]['add_rules']
         remove_rules = self.dbag['config'][0]['remove_rules']
