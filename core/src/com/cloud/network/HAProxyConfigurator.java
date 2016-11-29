@@ -491,6 +491,13 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         result.add(sb.toString());
         sb = new StringBuilder();
         sb.append("\t").append("balance ").append(algorithm);
+
+        if (lbTagsMap.get("cfg.lb.maxconn") != null) {
+            sb.append("\n\tmaxconn " + lbTagsMap.get("cfg.lb.maxconn"));
+        }
+        if (lbTagsMap.get("cfg.lb.fullconn") != null) {
+            sb.append("\n\tfullconn " + lbTagsMap.get("cfg.lb.fullconn"));
+        }
         result.add(sb.toString());
 
         int i = 0;
@@ -514,6 +521,15 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             .append(":")
             .append(dest.getDestPort())
             .append(" check");
+            if (lbTagsMap.get("cfg.lb.maxconn.each") != null) {
+                sb.append(" maxconn " + lbTagsMap.get("cfg.lb.maxconn.each"));
+            }
+            if (lbTagsMap.get("cfg.lb.minconn.each") != null) {
+                sb.append(" minconn " + lbTagsMap.get("cfg.lb.minconn.each"));
+            }
+            if (lbTagsMap.get("cfg.lb.maxqueue.each") != null) {
+                sb.append(" maxqueue " + lbTagsMap.get("cfg.lb.maxqueue.each"));
+            }
             if(lbTO.getLbProtocol() != null && lbTO.getLbProtocol().equals("tcp-proxy")) {
                 sb.append(" send-proxy");
             }
@@ -597,10 +613,20 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         final List<String> result = new ArrayList<String>();
         final List<String> gSection = Arrays.asList(globalSection);
         //        note that this is overwritten on the String in the static ArrayList<String>
-        gSection.set(2, "\tmaxconn " + lbCmd.maxconn);
+        String maxconn = lbCmd.maxconn;
+        if (networkLbTagsMap.get("cfg.lb.maxconn") != null) {
+            maxconn = networkLbTagsMap.get("cfg.lb.maxconn");
+        }
+        gSection.set(2, "\tmaxconn " + maxconn);
+
         // TODO DH: write test for this function
-        final String pipesLine = "\tmaxpipes " + Long.toString(Long.parseLong(lbCmd.maxconn) / 4);
-        gSection.set(3, pipesLine);
+        if (networkLbTagsMap.get("cfg.lb.maxpipes") != null) {
+            gSection.set(3, "\tmaxpipes " + networkLbTagsMap.get("cfg.lb.maxpipes"));
+        } else {
+            final String pipesLine = "\tmaxpipes " + Long.toString(Long.parseLong(maxconn) / 4);
+            gSection.set(3, pipesLine);
+        }
+
         if (s_logger.isDebugEnabled()) {
             for (final String s : gSection) {
                 s_logger.debug("global section: " + s);
