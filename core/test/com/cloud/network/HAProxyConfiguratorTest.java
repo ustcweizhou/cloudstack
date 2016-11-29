@@ -85,11 +85,6 @@ public class HAProxyConfiguratorTest {
         result = genConfig(hpg, cmd);
         assertTrue("keepalive enabled should result in 'mode http' in the resulting haproxy config", result.contains("mode http"));
 
-        lb = new LoadBalancerTO("1", "10.2.0.1", 8080, "http", "bla", false, false, false, null); // port from 80 to 8080
-        lba[0] = lb;
-        cmd = new LoadBalancerConfigCommand(lba, "10.0.0.1", "10.1.0.1", "10.1.1.1", null, 1L, "4", true);
-        result = genConfig(hpg, cmd);
-        assertTrue("keepalive enabled should not result in 'mode http' in the resulting haproxy config", !result.contains("mode http"));
         // TODO
         // create lb command
         // setup tests for

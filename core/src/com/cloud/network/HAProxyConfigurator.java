@@ -565,10 +565,26 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         if (stickinessSubRule != null && !destsAvailable) {
             s_logger.warn("Haproxy stickiness policy for lb rule: " + lbTO.getSrcIp() + ":" + lbTO.getSrcPort() + ": Not Applied, cause:  backends are unavailable");
         }
-        if (publicPort.equals(NetUtils.HTTP_PORT) || httpbasedStickiness) {
+
+        Boolean http = false;
+        String cfgHttp = lbTagsMap.get("cfg.lb.http");
+        if (publicPort.equals(NetUtils.HTTP_PORT) && cfgHttp == null) {
+            http = true;
+        } else if (cfgHttp != null && cfgHttp.equalsIgnoreCase("true")) {
+            http = true;
+        }
+        if (http || httpbasedStickiness) {
             sb = new StringBuilder();
             sb.append("\t").append("mode http");
             result.add(sb.toString());
+        }
+
+        Boolean keepalive = false;
+        String cfgKeepalive = lbTagsMap.get("cfg.lb.http.keepalive");
+        if (cfgKeepalive != null && cfgKeepalive.equalsIgnoreCase("true")) {
+            keepalive = true;
+        }
+        if ((http && !keepalive) || httpbasedStickiness) {
             sb = new StringBuilder();
             sb.append("\t").append("option httpclose");
             result.add(sb.toString());
