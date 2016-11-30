@@ -19,11 +19,13 @@
 
 package com.cloud.agent.resource.virtualnetwork.facade;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.cloud.agent.api.routing.LoadBalancerConfigCommand;
 import com.cloud.agent.api.routing.NetworkElementCommand;
+import com.cloud.agent.api.to.ResourceTagTO;
 import com.cloud.agent.resource.virtualnetwork.ConfigItem;
 import com.cloud.agent.resource.virtualnetwork.VRScripts;
 import com.cloud.agent.resource.virtualnetwork.model.ConfigBase;
@@ -56,6 +58,19 @@ public class LoadBalancerConfigItem extends AbstractConfigItemFacade {
         final String[] statRules = allRules[LoadBalancerConfigurator.STATS];
 
         final LoadBalancerRule loadBalancerRule = new LoadBalancerRule(configuration, tmpCfgFilePath, tmpCfgFileName, addRules, removeRules, statRules, routerIp);
+
+        final HashMap<String, String> networkLbTagsMap = new HashMap<String, String>();
+        final ResourceTagTO[] lbTags = command.getLbTags();
+        if (lbTags != null) {
+            for (ResourceTagTO lbTag: lbTags) {
+                networkLbTagsMap.put(lbTag.getKey(), lbTag.getValue());
+            }
+        }
+        if (networkLbTagsMap.get("cfg.lb.haproxy.transparent") != null && networkLbTagsMap.get("cfg.lb.haproxy.transparent").equalsIgnoreCase("true")) {
+            loadBalancerRule.setIsTransparent(true);
+        } else {
+            loadBalancerRule.setIsTransparent(false);
+        }
 
         final List<LoadBalancerRule> rules = new LinkedList<LoadBalancerRule>();
         rules.add(loadBalancerRule);

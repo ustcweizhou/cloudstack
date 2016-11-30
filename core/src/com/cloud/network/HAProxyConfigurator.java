@@ -590,6 +590,13 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             result.add(sb.toString());
         }
 
+        if (networkLbTagsMap.get("cfg.lb.haproxy.transparent") != null && networkLbTagsMap.get("cfg.lb.haproxy.transparent").equalsIgnoreCase("true")
+                && lbTagsMap.get("cfg.lb.transparent") != null && lbTagsMap.get("cfg.lb.transparent").equalsIgnoreCase("true")) {
+            sb = new StringBuilder();
+            sb.append("\t").append("source 0.0.0.0 usesrc clientip");
+            result.add(sb.toString());
+        }
+
         result.add(blankLine);
         return result;
     }
@@ -637,6 +644,11 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         } else {
             final String pipesLine = "\tmaxpipes " + Long.toString(Long.parseLong(maxconn) / 4);
             gSection.set(3, pipesLine);
+        }
+
+        if (networkLbTagsMap.get("cfg.lb.haproxy.transparent") != null && networkLbTagsMap.get("cfg.lb.haproxy.transparent").equalsIgnoreCase("true")) {
+            gSection.set(5, "\tuser root");
+            gSection.set(6, "\tgroup root");
         }
 
         if (s_logger.isDebugEnabled()) {
