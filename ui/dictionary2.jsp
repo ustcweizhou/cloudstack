@@ -1125,6 +1125,12 @@ under the License.
 'message.removed.ssh.key.pair': '<fmt:message key="message.removed.ssh.key.pair" />',
 'message.please.select.ssh.key.pair.use.with.this.vm': '<fmt:message key="message.please.select.ssh.key.pair.use.with.this.vm" />',
 'message.ldap.group.import': '<fmt:message key="message.ldap.group.import" />',
-'label.vpn.force.encapsulation': '<fmt:message key="label.vpn.force.encapsulation" />'
+'label.vpn.force.encapsulation': '<fmt:message key="label.vpn.force.encapsulation" />',
+'label.ssl.certificate': '<fmt:message key="label.ssl.certificate" />',
+'label.add.ssl.certicate': '<fmt:message key="label.add.ssl.certicate" />',
+'label.delete.ssl.certificate': '<fmt:message key="label.delete.ssl.certificate" />',
+'message.delete.ssl.certificate': '<fmt:message key="message.delete.ssl.certificate" />',
+'label.ssl.certificate.chain': '<fmt:message key="label.ssl.certificate.chain" />',
+'label.load.balancer.rule': '<fmt:message key="label.load.balancer.rule" />'
 });
 </script>

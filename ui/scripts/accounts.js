@@ -894,6 +894,203 @@
                                 }
                             },
 
+                            sslCerts: {
+                                title: 'label.ssl.certificate',
+                                listView: {
+                                    id: "sslCerts",
+                                    fields: {
+                                        id: {
+                                            label: 'label.id'
+                                        },
+                                        domain: {
+                                            label: 'label.domain'
+                                        },
+                                        account: {
+                                            label: 'label.account'
+                                        }
+                                    },
+                                    dataProvider: function(args) {
+                                        var data = {};
+                                        listViewDataProvider(args, data);
+                                        if (args.context != null) {
+                                            if ("accounts" in args.context) {
+                                                $.extend(data, {
+                                                    accountid: args.context.accounts[0].id
+                                                });
+                                            }
+                                        }
+                                        $.ajax({
+                                            url: createURL('listSslCerts'),
+                                            data: data,
+                                            success: function(json) {
+                                                var items = json.listsslcertsresponse.sslcert;
+                                                args.response.success({
+                                                    data: items
+                                                });
+                                            }
+                                        });
+                                    },
+                                    actions: {
+                                        add: {
+                                            label: 'label.add.ssl.certicate',
+
+                                            messages: {
+                                                notification: function(args) {
+                                                    return 'label.add.ssl.certicate';
+                                                }
+                                            },
+
+                                            createForm: {
+                                                title: 'label.add.ssl.certicate',
+                                                fields: {
+                                                    certificate: {
+                                                        label: 'label.ssl.certificate',
+                                                        isTextarea: true,
+                                                        validation: {
+                                                            required: true
+                                                        }
+                                                    },
+                                                    privatekey: {
+                                                        label: 'label.private.key',
+                                                        isTextarea: true,
+                                                        validation: {
+                                                            required: true
+                                                        }
+                                                    },
+                                                    certchain: {
+                                                        isTextarea: true,
+                                                        label: 'label.cert.chain'
+                                                    },
+                                                    password: {
+                                                        label: 'label.password'
+                                                    }
+                                                }
+                                            },
+
+                                            action: function(args) {
+                                                var data = {
+                                                    certificate: args.data.certificate,
+                                                    privatekey: args.data.privatekey
+                                                };
+                                                if (args.data.certchain != null && args.data.certchain.length > 0)
+                                                    $.extend(data, {
+                                                        certchain: args.data.certchain
+                                                    });
+                                                if (args.data.password != null && args.data.password.length > 0)
+                                                    $.extend(data, {
+                                                        password: args.data.password
+                                                    });
+
+                                                $.ajax({
+                                                    url: createURL('uploadSslCert'),
+                                                    data: data,
+                                                    success: function(json) {
+                                                        args.response.success({
+                                                            data: json.uploadsslcertresponse.sslcert
+                                                        });
+                                                    }
+                                                });
+                                            },
+
+                                            notification: {
+                                                poll: function(args) {
+                                                    args.complete();
+                                                }
+                                            }
+                                        }
+                                    },
+
+                                    detailView: {
+                                        actions: {
+                                            remove: {
+                                                label: 'label.delete.ssl.certificate',
+                                                messages: {
+                                                    confirm: function(args) {
+                                                        return 'message.delete.ssl.certificate';
+                                                    },
+                                                    notification: function(args) {
+                                                        return 'label.delete.ssl.certificate';
+                                                    }
+                                                },
+                                                action: function(args) {
+                                                    $.ajax({
+                                                        url: createURL('deleteSslCert'),
+                                                        data: {
+                                                            id: args.context.sslCerts[0].id
+                                                        },
+                                                        success: function(json) {
+                                                            args.response.success();
+                                                            $(window).trigger('cloudStack.fullRefresh');
+                                                        }
+                                                    });
+                                                },
+                                                notification: {
+                                                    poll: function(args) {
+                                                        args.complete();
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        tabs: {
+                                            details: {
+                                                title: 'label.details',
+                                                fields: [{
+                                                    id: {
+                                                        label: 'label.id'
+                                                    },
+                                                }, {
+                                                    certificate: {
+                                                        label: 'label.ssl.certificate',
+                                                        span: false
+                                                    },
+
+                                                    certchain: {
+                                                        label: 'label.ssl.certificate.chain',
+                                                        span: false
+                                                    },
+                                                    fingerprint: {
+                                                        label: 'label.fingerprint',
+                                                        span: false
+                                                    },
+                                                    id: {
+                                                        label: 'label.id'
+                                                    },
+                                                    domain: {
+                                                        label: 'label.domain'
+                                                    },
+                                                    account: {
+                                                        label: 'label.account'
+                                                    },
+                                                    loadbalancerrules: {
+                                                        label: 'label.load.balancer.rule'
+                                                    }
+                                                }],
+
+                                                dataProvider: function(args) {
+                                                    $.ajax({
+                                                        url: createURL('listSslCerts'),
+                                                        data: {
+                                                            certid: args.context.sslCerts[0].id
+                                                        },
+                                                        success: function(json) {
+                                                            var item = json.listsslcertsresponse.sslcert[0];
+                                                            var loadbalancerrulelist = item.loadbalancerrulelist ? item.loadbalancerrulelist : [];
+                                                            args.response.success({
+                                                                data: $.extend(item, {
+                                                                    loadbalancerrules: $.map(loadbalancerrulelist, function(loadbalancerrule) {
+                                                                        return loadbalancerrule;
+                                                                    }).join(', '),
+                                                                })
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+
                             // Granular settings for account
                             settings: {
                                 title: 'label.settings',
