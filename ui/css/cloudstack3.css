@@ -11504,6 +11504,30 @@ div.ui-dialog div.acl div.multi-edit div.data div.data-body div.data-item table 
   width: 65px;
 }
 
+/*SSL CERTIFICATE*/
+.ui-dialog .ssl-certificate {
+  width: 500px !important;
+  padding-bottom: 93px;
+}
+
+div.ui-dialog div.ssl-certificate div.ssl-certificate-description {
+  color: #808080;
+  font-size: 17px;
+  margin-left: 15px;
+  text-align: left;
+}
+
+div.ui-dialog div.ssl-certificate div.ssl-certificate-content {
+  font-size: 14px;
+  text-align: left;
+  margin-left: 15px;
+  margin-top: 10px;
+}
+
+div.ui-dialog div.ssl-certificate div.form-container form div.form-item {
+  margin-bottom: 30px;
+}
+
 /*HEALTH CHECK*/
 .ui-dialog .health-check {
   height: 295px !important;

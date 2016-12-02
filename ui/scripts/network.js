@@ -3614,6 +3614,15 @@
                                                 }
                                             },
 
+                                            'ssl-certificate': {
+                                                label: 'label.ssl.certificate',
+                                                custom: {
+                                                    requireValidation: true,
+                                                    buttonLabel: 'Configure',
+                                                    action: cloudStack.uiCustom.sslCertificate()
+                                                },
+                                            },
+
                                             'health-check': {
                                                 label: 'label.health.check',
                                                 custom: {

@@ -1796,6 +1796,7 @@
         <script type="text/javascript" src="scripts/lbStickyPolicy.js"></script>
         <script type="text/javascript" src="scripts/ui-custom/autoscaler.js"></script>
         <script type="text/javascript" src="scripts/ui-custom/healthCheck.js"></script>
+        <script type="text/javascript" src="scripts/ui-custom/sslCertificate.js"></script>
         <script type="text/javascript" src="scripts/autoscaler.js"></script>
         <script type="text/javascript" src="scripts/ui-custom/granularSettings.js"></script>
         <script type="text/javascript" src="scripts/ui-custom/zoneChart.js"></script>

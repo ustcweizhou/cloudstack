@@ -959,7 +959,7 @@
                                                     },
                                                     certchain: {
                                                         isTextarea: true,
-                                                        label: 'label.cert.chain'
+                                                        label: 'label.ssl.certificate.chain'
                                                     },
                                                     password: {
                                                         label: 'label.password'
