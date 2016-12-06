@@ -313,6 +313,7 @@ public class CommandSetupHelper {
             final List<LbDestination> destinations = rule.getDestinations();
             final List<LbStickinessPolicy> stickinessPolicies = rule.getStickinessPolicies();
             final LoadBalancerTO lb = new LoadBalancerTO(uuid, srcIp, srcPort, protocol, algorithm, revoked, false, inline, destinations, stickinessPolicies);
+            lb.setLbSslCert(rule.getLbSslCert());
             lb.setLbProtocol(lb_protocol);
             lb.setLbTags(rule.getLbTags());
             lbs[i++] = lb;

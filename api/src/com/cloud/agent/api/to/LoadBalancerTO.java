@@ -211,6 +211,10 @@ public class LoadBalancerTO {
         return this.sslCert;
     }
 
+    public void setLbSslCert(LbSslCert sslCert) {
+        this.sslCert = sslCert;
+    }
+
     public static class StickinessPolicyTO {
         private String _methodName;
         private List<Pair<String, String>> _paramsList;

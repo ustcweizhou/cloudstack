@@ -1217,7 +1217,15 @@ public class LoadBalancingRulesManagerImpl<Type> extends ManagerBase implements 
             throw new InvalidParameterValueException("Another certificate is already bound to the LB");
 
         //check for correct port
-        if (loadBalancer.getLbProtocol() == null || !(loadBalancer.getLbProtocol().equals(NetUtils.SSL_PROTO)))
+        List<ResourceTag> lbTags = getLbTags(lbRuleId);
+        boolean cfgLbSslTermination = false;
+        for (ResourceTag lbTag : lbTags) {
+            if (lbTag.getKey().equalsIgnoreCase("cfg.lb.ssl.offloading") && lbTag.getValue().equalsIgnoreCase("true")) {
+                cfgLbSslTermination = true;
+                break;
+            }
+        }
+        if (!cfgLbSslTermination && (loadBalancer.getLbProtocol() == null || !(loadBalancer.getLbProtocol().equals(NetUtils.SSL_PROTO))))
             throw new InvalidParameterValueException("Bad LB protocol: Expected ssl got " + loadBalancer.getLbProtocol());
 
         boolean success = false;

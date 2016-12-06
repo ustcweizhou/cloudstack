@@ -35,6 +35,8 @@ import com.cloud.agent.api.to.LoadBalancerTO.DestinationTO;
 import com.cloud.agent.api.to.LoadBalancerTO.StickinessPolicyTO;
 import com.cloud.agent.api.to.PortForwardingRuleTO;
 import com.cloud.agent.api.to.ResourceTagTO;
+import com.cloud.agent.resource.virtualnetwork.model.LoadBalancerRule.SslCertEntry;
+import com.cloud.network.lb.LoadBalancingRule.LbSslCert;
 import com.cloud.network.rules.LbStickinessMethod.StickinessMethodType;
 import com.cloud.utils.Pair;
 import com.cloud.utils.net.NetUtils;
@@ -485,14 +487,35 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         }
 
         final List<String> result = new ArrayList<String>();
-        // add line like this: "listen  65_37_141_30-80 65.37.141.30:80"
-        sb = new StringBuilder();
-        sb.append("listen ").append(poolName).append(" ").append(publicIP).append(":").append(publicPort);
-        result.add(sb.toString());
+
+        boolean sslOffloading = false;
+        if (lbTagsMap.get("cfg.lb.ssl.offloading") != null && lbTagsMap.get("cfg.lb.ssl.offloading").equalsIgnoreCase("true") && lbTO.getSslCert() != null) {
+            sslOffloading = true;
+        }
+        if (sslOffloading) {
+            s_logger.debug("Generating haproxy configuration for ssl offloading on load balancer with " + publicIP + ":" + publicPort);
+            sb = new StringBuilder();
+            sb.append("frontend ").append(poolName);
+            sb.append("\n\tbind ").append(publicIP).append(":").append(publicPort).append(" ssl crt /etc/ssl/private/").append(poolName).append(".pem");
+            sb.append("\n\treqadd X-Forwarded-Proto:\\ https");
+            sb.append("\n\tdefault_backend ").append(poolName).append("-backend");
+            if (lbTagsMap.get("cfg.lb.maxconn") != null) {
+                sb.append("\n\tmaxconn " + lbTagsMap.get("cfg.lb.maxconn"));
+            }
+            sb.append("\n\n");
+            sb.append("backend ").append(poolName).append("-backend");
+            result.add(sb.toString());
+        } else {
+            // add line like this: "listen  65_37_141_30-80 65.37.141.30:80"
+            sb = new StringBuilder();
+            sb.append("listen ").append(poolName).append(" ").append(publicIP).append(":").append(publicPort);
+            result.add(sb.toString());
+        }
+
         sb = new StringBuilder();
         sb.append("\t").append("balance ").append(algorithm);
 
-        if (lbTagsMap.get("cfg.lb.maxconn") != null) {
+        if (!sslOffloading && lbTagsMap.get("cfg.lb.maxconn") != null) {
             sb.append("\n\tmaxconn " + lbTagsMap.get("cfg.lb.maxconn"));
         }
         if (lbTagsMap.get("cfg.lb.fullconn") != null) {
@@ -762,6 +785,25 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         result[REMOVE] = toRemove.toArray(new String[toRemove.size()]);
         result[STATS] = toStats.toArray(new String[toStats.size()]);
 
+        return result;
+    }
+
+    @Override
+    public SslCertEntry[] generateSslCertEntries(LoadBalancerConfigCommand lbCmd) {
+        final Set<SslCertEntry> sslCertEntries = new HashSet<SslCertEntry>();
+        for (final LoadBalancerTO lbTO : lbCmd.getLoadBalancers()) {
+            if (lbTO.getSslCert() != null) {
+                final LbSslCert cert = lbTO.getSslCert();
+                if (cert.isRevoked()) {
+                    continue;
+                }
+                StringBuilder sb = new StringBuilder();
+                final String name = sb.append(lbTO.getSrcIp().replace(".", "_")).append('-').append(lbTO.getSrcPort()).toString();
+                final SslCertEntry sslCertEntry = new SslCertEntry(name, cert.getCert(), cert.getKey(), cert.getChain(), cert.getPassword());
+                sslCertEntries.add(sslCertEntry);
+            }
+        }
+        final SslCertEntry[] result = sslCertEntries.toArray(new SslCertEntry[sslCertEntries.size()]);
         return result;
     }
 }
