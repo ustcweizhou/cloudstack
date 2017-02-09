@@ -3674,6 +3674,11 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             @Override
             public void doInTransactionWithoutResult(final TransactionStatus status) {
                 _publicIpAddressDao.deletePublicIPRange(vlanDbId);
+                final PodVlanMapVO podVlanMapVO = _podVlanMapDao.listPodVlanMapsByVlan(vlanDbId);
+                if (podVlanMapVO != null) {
+                    // The VLAN is pod-wide in Basic zone
+                    _podVlanMapDao.remove(podVlanMapVO.getId());
+                }
                 _vlanDao.remove(vlanDbId);
             }
         });
