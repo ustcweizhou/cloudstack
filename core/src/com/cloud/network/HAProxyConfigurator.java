@@ -496,6 +496,8 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             s_logger.debug("Generating haproxy configuration for ssl offloading on load balancer with " + publicIP + ":" + publicPort);
             sb = new StringBuilder();
             sb.append("frontend ").append(poolName);
+            sb.append("\n\t").append("mode http");
+            sb.append("\n\t").append("option httpclose");
             sb.append("\n\tbind ").append(publicIP).append(":").append(publicPort).append(" ssl crt /etc/ssl/private/").append(poolName).append(".pem");
             sb.append("\n\treqadd X-Forwarded-Proto:\\ https");
             sb.append("\n\tdefault_backend ").append(poolName).append("-backend");
@@ -504,6 +506,8 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             }
             sb.append("\n\n");
             sb.append("backend ").append(poolName).append("-backend");
+            sb.append("\n\t").append("mode http");
+            sb.append("\n\t").append("option httpclose");
             result.add(sb.toString());
         } else {
             // add line like this: "listen  65_37_141_30-80 65.37.141.30:80"
@@ -542,8 +546,12 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             .append(" ")
             .append(dest.getDestIp())
             .append(":")
-            .append(dest.getDestPort())
-            .append(" check");
+            .append(dest.getDestPort());
+            if (sslOffloading && (lbTagsMap.get("cfg.lb.backend.https") != null && lbTagsMap.get("cfg.lb.backend.https").equalsIgnoreCase("true"))) {
+                sb.append(" check ssl verify none");
+            } else {
+                sb.append(" check");
+            }
             if (lbTagsMap.get("cfg.lb.maxconn.each") != null) {
                 sb.append(" maxconn " + lbTagsMap.get("cfg.lb.maxconn.each"));
             }
