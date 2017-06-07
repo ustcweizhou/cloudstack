@@ -46,6 +46,7 @@ public class LoadBalancerConfigCommand extends NetworkElementCommand {
     public boolean keepAliveEnabled = false;
     NicTO nic;
     Long vpcId;
+    String networkCidr;
 
     protected LoadBalancerConfigCommand() {
     }
@@ -92,5 +93,13 @@ public class LoadBalancerConfigCommand extends NetworkElementCommand {
         for (ResourceTag lbTag : lbTags) {
             this.lbTags[i++] = new ResourceTagTO(lbTag);
         }
+    }
+
+    public void setNetworkCidr(String networkCidr) {
+        this.networkCidr = networkCidr;
+    }
+
+    public String getNetworkCidr() {
+        return networkCidr;
     }
 }

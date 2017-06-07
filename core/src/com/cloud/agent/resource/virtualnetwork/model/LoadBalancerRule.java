@@ -27,6 +27,7 @@ public class LoadBalancerRule {
     private String tmpCfgFileName;
     private Boolean isTransparent;
     private SslCertEntry[] sslCerts;
+    private String networkCidr;
 
     private String[] addRules;
     private String[] removeRules;
@@ -165,5 +166,13 @@ public class LoadBalancerRule {
 
     public void setSslCerts(final SslCertEntry[] sslCerts) {
         this.sslCerts = sslCerts;
+    }
+
+    public void setNetworkCidr(String networkCidr) {
+        this.networkCidr = networkCidr;
+    }
+
+    public String getNetworkCidr() {
+        return networkCidr;
     }
 }

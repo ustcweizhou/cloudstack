@@ -471,7 +471,7 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         return sb.toString();
     }
 
-    private List<String> getRulesForPool(final LoadBalancerTO lbTO, final boolean keepAliveEnabled) {
+    private List<String> getRulesForPool(final LoadBalancerTO lbTO, final boolean keepAliveEnabled, final String networkCidr) {
         StringBuilder sb = new StringBuilder();
         final String poolName = sb.append(lbTO.getSrcIp().replace(".", "_")).append('-').append(lbTO.getSrcPort()).toString();
         final String publicIP = lbTO.getSrcIp();
@@ -492,29 +492,13 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         if (lbTagsMap.get("cfg.lb.ssl.offloading") != null && lbTagsMap.get("cfg.lb.ssl.offloading").equalsIgnoreCase("true") && lbTO.getSslCert() != null) {
             sslOffloading = true;
         }
-        if (sslOffloading) {
-            s_logger.debug("Generating haproxy configuration for ssl offloading on load balancer with " + publicIP + ":" + publicPort);
-            sb = new StringBuilder();
-            sb.append("frontend ").append(poolName);
-            sb.append("\n\t").append("mode http");
-            sb.append("\n\t").append("option httpclose");
-            sb.append("\n\tbind ").append(publicIP).append(":").append(publicPort).append(" ssl crt /etc/ssl/private/").append(poolName).append(".pem");
-            sb.append("\n\treqadd X-Forwarded-Proto:\\ https");
-            sb.append("\n\tdefault_backend ").append(poolName).append("-backend");
-            if (lbTagsMap.get("cfg.lb.maxconn") != null) {
-                sb.append("\n\tmaxconn " + lbTagsMap.get("cfg.lb.maxconn"));
-            }
-            sb.append("\n\n");
-            sb.append("backend ").append(poolName).append("-backend");
-            sb.append("\n\t").append("mode http");
-            sb.append("\n\t").append("option httpclose");
-            result.add(sb.toString());
-        } else {
-            // add line like this: "listen  65_37_141_30-80 65.37.141.30:80"
-            sb = new StringBuilder();
-            sb.append("listen ").append(poolName).append(" ").append(publicIP).append(":").append(publicPort);
-            result.add(sb.toString());
+        boolean transparent = false;
+        if (networkLbTagsMap.get("cfg.lb.haproxy.transparent") != null && networkLbTagsMap.get("cfg.lb.haproxy.transparent").equalsIgnoreCase("true")
+                && lbTagsMap.get("cfg.lb.transparent") != null && lbTagsMap.get("cfg.lb.transparent").equalsIgnoreCase("true")) {
+            transparent = true;
         }
+
+        final List<String> backendConfigurations = new ArrayList<String>();
 
         sb = new StringBuilder();
         sb.append("\t").append("balance ").append(algorithm);
@@ -525,7 +509,7 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         if (lbTagsMap.get("cfg.lb.fullconn") != null) {
             sb.append("\n\tfullconn " + lbTagsMap.get("cfg.lb.fullconn"));
         }
-        result.add(sb.toString());
+        backendConfigurations.add(sb.toString());
 
         int i = 0;
         Boolean destsAvailable = false;
@@ -585,13 +569,13 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
                 }
             }
             if (httpbasedStickiness) {
-                result.addAll(dstWithCookieSubRule);
+                backendConfigurations.addAll(dstWithCookieSubRule);
             } else {
-                result.addAll(dstSubRule);
+                backendConfigurations.addAll(dstSubRule);
             }
-            result.add(stickinessSubRule);
+            backendConfigurations.add(stickinessSubRule);
         } else {
-            result.addAll(dstSubRule);
+            backendConfigurations.addAll(dstSubRule);
         }
         if (stickinessSubRule != null && !destsAvailable) {
             s_logger.warn("Haproxy stickiness policy for lb rule: " + lbTO.getSrcIp() + ":" + lbTO.getSrcPort() + ": Not Applied, cause:  backends are unavailable");
@@ -607,7 +591,7 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         if (http || httpbasedStickiness) {
             sb = new StringBuilder();
             sb.append("\t").append("mode http");
-            result.add(sb.toString());
+            backendConfigurations.add(sb.toString());
         }
 
         Boolean keepalive = false;
@@ -618,14 +602,72 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
         if ((http && !keepalive) || httpbasedStickiness) {
             sb = new StringBuilder();
             sb.append("\t").append("option httpclose");
-            result.add(sb.toString());
+            backendConfigurations.add(sb.toString());
         }
 
-        if (networkLbTagsMap.get("cfg.lb.haproxy.transparent") != null && networkLbTagsMap.get("cfg.lb.haproxy.transparent").equalsIgnoreCase("true")
-                && lbTagsMap.get("cfg.lb.transparent") != null && lbTagsMap.get("cfg.lb.transparent").equalsIgnoreCase("true")) {
+        if (sslOffloading) {
+            s_logger.debug("Generating haproxy configuration for ssl offloading on load balancer with " + publicIP + ":" + publicPort);
+            sb = new StringBuilder();
+            sb.append("frontend ").append(poolName);
+            sb.append("\n\t").append("mode http");
+            sb.append("\n\t").append("option httpclose");
+            sb.append("\n\tbind ").append(publicIP).append(":").append(publicPort).append(" ssl crt /etc/ssl/private/").append(poolName).append(".pem");
+            sb.append("\n\treqadd X-Forwarded-Proto:\\ https");
+            if (transparent) {
+                sb.append("\n\tacl local_subnet src ").append(networkCidr);
+                sb.append("\n\tuse_backend ").append(poolName).append("-backend-local if local_subnet");
+            }
+            sb.append("\n\tdefault_backend ").append(poolName).append("-backend");
+            if (lbTagsMap.get("cfg.lb.maxconn") != null) {
+                sb.append("\n\tmaxconn " + lbTagsMap.get("cfg.lb.maxconn"));
+            }
+            sb.append("\n\n");
+            sb.append("backend ").append(poolName).append("-backend");
+            sb.append("\n\t").append("mode http");
+            sb.append("\n\t").append("option httpclose");
+            result.add(sb.toString());
+            result.addAll(backendConfigurations);
+            if (transparent) {
+                sb = new StringBuilder();
+                sb.append("\t").append("source 0.0.0.0 usesrc clientip");
+                sb.append("\n\n");
+                sb.append("backend ").append(poolName).append("-backend-local");
+                sb.append("\n\t").append("mode http");
+                sb.append("\n\t").append("option httpclose");
+                result.add(sb.toString());
+                result.addAll(backendConfigurations);
+           }
+        } else if (transparent) {
+            s_logger.debug("Generating haproxy configuration for transparent load balancer with " + publicIP + ":" + publicPort);
+            sb = new StringBuilder();
+            sb.append("frontend ").append(poolName);
+            sb.append("\n\tbind ").append(publicIP).append(":").append(publicPort);
+            sb.append("\n\tacl local_subnet src ").append(networkCidr);
+            sb.append("\n\tuse_backend ").append(poolName).append("-backend-local if local_subnet");
+            sb.append("\n\tdefault_backend ").append(poolName).append("-backend");
+            if (lbTagsMap.get("cfg.lb.maxconn") != null) {
+                sb.append("\n\tmaxconn " + lbTagsMap.get("cfg.lb.maxconn"));
+            }
+            sb.append("\n\n");
+            sb.append("backend ").append(poolName).append("-backend");
+            sb.append("\n\t").append("mode http");
+            sb.append("\n\t").append("option httpclose");
+            result.add(sb.toString());
+            result.addAll(backendConfigurations);
             sb = new StringBuilder();
             sb.append("\t").append("source 0.0.0.0 usesrc clientip");
+            sb.append("\n\n");
+            sb.append("backend ").append(poolName).append("-backend-local");
+            sb.append("\n\t").append("mode http");
+            sb.append("\n\t").append("option httpclose");
             result.add(sb.toString());
+            result.addAll(backendConfigurations);
+        } else {
+            // add line like this: "listen  65_37_141_30-80 65.37.141.30:80"
+            sb = new StringBuilder();
+            sb.append("listen ").append(poolName).append(" ").append(publicIP).append(":").append(publicPort);
+            result.add(sb.toString());
+            result.addAll(backendConfigurations);
         }
 
         result.add(blankLine);
@@ -743,7 +785,7 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             if (lbTO.isRevoked()) {
                 continue;
             }
-            final List<String> poolRules = getRulesForPool(lbTO, lbCmd.keepAliveEnabled);
+            final List<String> poolRules = getRulesForPool(lbTO, lbCmd.keepAliveEnabled, lbCmd.getNetworkCidr());
             result.addAll(poolRules);
             has_listener = true;
         }
