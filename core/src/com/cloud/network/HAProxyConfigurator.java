@@ -650,16 +650,12 @@ public class HAProxyConfigurator implements LoadBalancerConfigurator {
             }
             sb.append("\n\n");
             sb.append("backend ").append(poolName).append("-backend");
-            sb.append("\n\t").append("mode http");
-            sb.append("\n\t").append("option httpclose");
             result.add(sb.toString());
             result.addAll(backendConfigurations);
             sb = new StringBuilder();
             sb.append("\t").append("source 0.0.0.0 usesrc clientip");
             sb.append("\n\n");
             sb.append("backend ").append(poolName).append("-backend-local");
-            sb.append("\n\t").append("mode http");
-            sb.append("\n\t").append("option httpclose");
             result.add(sb.toString());
             result.addAll(backendConfigurations);
         } else {
