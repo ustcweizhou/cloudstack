@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.cloud.configuration.ConfigurationManagerImpl;
 import com.cloud.dc.dao.VlanDao;
 import com.cloud.deploy.DataCenterDeployment;
 import com.cloud.deploy.DeployDestination;
@@ -34,10 +35,12 @@ import com.cloud.network.PhysicalNetwork;
 import com.cloud.network.PhysicalNetworkServiceProvider;
 import com.cloud.network.VirtualRouterProvider.Type;
 import com.cloud.network.dao.PhysicalNetworkDao;
+import com.cloud.network.router.VirtualNetworkApplianceManager;
 import com.cloud.network.vpc.Vpc;
 import com.cloud.network.vpc.VpcManager;
 import com.cloud.network.vpc.dao.VpcDao;
 import com.cloud.network.vpc.dao.VpcOfferingDao;
+import com.cloud.service.ServiceOfferingVO;
 import com.cloud.user.Account;
 import com.cloud.utils.exception.CloudRuntimeException;
 import com.cloud.vm.DomainRouterVO;
@@ -160,7 +163,26 @@ public class VpcRouterDeploymentDefinition extends RouterDeploymentDefinition {
     protected void findServiceOfferingId() {
         serviceOfferingId = vpcOffDao.findById(vpc.getVpcOfferingId()).getServiceOfferingId();
         if (serviceOfferingId == null) {
+            findVpcServiceOfferingId();
+        }
+        if (serviceOfferingId == null) {
+            findAccountServiceOfferingId();
+        }
+        if (serviceOfferingId == null) {
             findDefaultServiceOfferingId();
+        }
+    }
+
+    protected void findVpcServiceOfferingId() {
+        String vpcRouterOffering = VirtualNetworkApplianceManager.VpcVirtualRouterServiceOffering.valueIn(vpc.getId());
+        if (vpcRouterOffering != null) {
+            ServiceOfferingVO serviceOffering = serviceOfferingDao.findByUuid(vpcRouterOffering);
+            if (serviceOffering != null) {
+                boolean isLocalStorage = ConfigurationManagerImpl.SystemVMUseLocalStorage.valueIn(dest.getDataCenter().getId());
+                if (isLocalStorage == serviceOffering.getUseLocalStorage()) {
+                    serviceOfferingId = serviceOffering.getId();
+                }
+            }
         }
     }
 
