@@ -45,6 +45,7 @@ public interface VirtualNetworkApplianceManager extends Manager, VirtualNetworkA
     static final String RouterAlertsCheckIntervalCK = "router.alerts.check.interval";
     static final String VirtualRouterServiceOfferingCK = "router.service.offering";
     static final String NetworkVirtualRouterServiceOfferingCK = "network.router.service.offering";
+    static final String VpcVirtualRouterServiceOfferingCK = "vpc.router.service.offering";
 
     static final ConfigKey<String> RouterTemplateXen = new ConfigKey<String>(String.class, RouterTemplateXenCK, "Advanced", "SystemVM Template (XenServer)",
             "Name of the default router template on Xenserver.", true, ConfigKey.Scope.Zone, null);
@@ -72,6 +73,8 @@ public interface VirtualNetworkApplianceManager extends Manager, VirtualNetworkA
             "Uuid of the service offering used by virtual routers; if NULL - system offering will be used", true, ConfigKey.Scope.Account, null);
     static final ConfigKey<String> NetworkVirtualRouterServiceOffering = new ConfigKey<String>(String.class, NetworkVirtualRouterServiceOfferingCK, "Advanced", "",
             "Uuid of the service offering used by virtual routers of this network; if NULL - account/system offering will be used", true, ConfigKey.Scope.Network, null);
+    static final ConfigKey<String> VpcVirtualRouterServiceOffering = new ConfigKey<String>(String.class, VpcVirtualRouterServiceOfferingCK, "Advanced", "",
+            "Uuid of the service offering used by virtual routers of this vpc; if NULL - account/system offering will be used", true, ConfigKey.Scope.Vpc, null);
 
     public static final int DEFAULT_ROUTER_VM_RAMSIZE = 256;            // 256M
     public static final int DEFAULT_ROUTER_CPU_MHZ = 500;                // 500 MHz

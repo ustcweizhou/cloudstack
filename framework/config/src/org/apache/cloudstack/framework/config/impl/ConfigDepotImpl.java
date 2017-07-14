@@ -85,6 +85,7 @@ public class ConfigDepotImpl implements ConfigDepot, ConfigDepotAdmin {
         _scopeLevelConfigsMap.put(ConfigKey.Scope.ImageStore, new HashSet<ConfigKey<?>>());
         _scopeLevelConfigsMap.put(ConfigKey.Scope.Domain, new HashSet<ConfigKey<?>>());
         _scopeLevelConfigsMap.put(ConfigKey.Scope.Network, new HashSet<ConfigKey<?>>());
+        _scopeLevelConfigsMap.put(ConfigKey.Scope.Vpc, new HashSet<ConfigKey<?>>());
     }
 
     @Override

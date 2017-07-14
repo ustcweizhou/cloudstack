@@ -30,7 +30,7 @@ import java.sql.Date;
 public class ConfigKey<T> {
 
     public static enum Scope {
-        Global, Zone, Cluster, StoragePool, Account, ManagementServer, ImageStore, Domain, Network
+        Global, Zone, Cluster, StoragePool, Account, ManagementServer, ImageStore, Domain, Network, Vpc
     }
 
     private final String _category;

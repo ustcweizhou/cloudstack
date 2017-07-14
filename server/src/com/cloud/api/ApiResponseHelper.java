@@ -2919,6 +2919,8 @@ public class ApiResponseHelper implements ResponseGenerator {
             CollectionUtils.addIgnoreNull(tagResponses, tagResponse);
         }
         response.setTags(tagResponses);
+
+        response.setDetails(ApiDBUtils.getVpcDetails(vpc.getId()));
         response.setObjectName("vpc");
         return response;
     }

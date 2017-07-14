@@ -301,6 +301,7 @@ import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.framework.jobs.AsyncJob;
 import org.apache.cloudstack.framework.jobs.AsyncJobManager;
 import org.apache.cloudstack.framework.jobs.dao.AsyncJobDao;
+import org.apache.cloudstack.resourcedetail.dao.VpcDetailsDao;
 import org.apache.cloudstack.storage.datastore.db.PrimaryDataStoreDao;
 import org.apache.cloudstack.storage.datastore.db.StoragePoolVO;
 
@@ -417,6 +418,7 @@ public class ApiDBUtils {
     static StaticRouteDao s_staticRouteDao;
     static VpcGatewayDao s_vpcGatewayDao;
     static VpcDao s_vpcDao;
+    static VpcDetailsDao s_vpcDetailsDao;
     static VpcOfferingDao s_vpcOfferingDao;
     static SnapshotPolicyDao s_snapshotPolicyDao;
     static AsyncJobDao s_asyncJobDao;
@@ -562,6 +564,8 @@ public class ApiDBUtils {
     private NetworkDomainDao networkDomainDao;
     @Inject
     private NetworkDetailsDao networkDetailsDao;
+    @Inject
+    private VpcDetailsDao vpcDetailsDao;
     @Inject
     private HighAvailabilityManager haMgr;
     @Inject
@@ -769,6 +773,7 @@ public class ApiDBUtils {
         s_asVmProfileDao = asVmProfileDao;
         s_asVmGroupDao = asVmGroupDao;
         s_vpcDao = vpcDao;
+        s_vpcDetailsDao = vpcDetailsDao;
         s_vpcOfferingDao = vpcOfferingDao;
         s_snapshotPolicyDao = snapshotPolicyDao;
         s_asyncJobDao = asyncJobDao;
@@ -1411,6 +1416,11 @@ public class ApiDBUtils {
 
     public static List<? extends Network> listVpcNetworks(long vpcId) {
         return s_networkModel.listNetworksByVpc(vpcId);
+    }
+
+    public static Map<String, String> getVpcDetails(long vpcId) {
+        Map<String, String> details = s_vpcDetailsDao.findDetails(vpcId);
+        return details.isEmpty() ? null : details;
     }
 
     public static boolean canUseForDeploy(Network network) {

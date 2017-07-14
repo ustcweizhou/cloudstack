@@ -1711,6 +1711,7 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
         final Long domainId = cmd.getDomainId();
         final Long imageStoreId = cmd.getImageStoreId();
         final Long networkId = cmd.getNetworkId();
+        final Long vpcId = cmd.getVpcId();
 
         String scope = null;
         Long id = null;
@@ -1738,6 +1739,11 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
         if (networkId != null) {
             scope = ConfigKey.Scope.Network.toString();
             id = networkId;
+            paramCountCheck++;
+        }
+        if (vpcId != null) {
+            scope = ConfigKey.Scope.Vpc.toString();
+            id = vpcId;
             paramCountCheck++;
         }
         if (storagepoolId != null) {

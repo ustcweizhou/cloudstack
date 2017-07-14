@@ -29,6 +29,7 @@ import org.apache.cloudstack.api.response.ImageStoreResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.NetworkResponse;
 import org.apache.cloudstack.api.response.StoragePoolResponse;
+import org.apache.cloudstack.api.response.VpcResponse;
 import org.apache.cloudstack.api.response.ZoneResponse;
 import org.apache.cloudstack.config.Configuration;
 import org.apache.log4j.Logger;
@@ -95,6 +96,12 @@ public class ListCfgsByCmd extends BaseListCmd {
                description = "the ID of the Network to update the parameter value for corresponding network")
     private Long networkId;
 
+    @Parameter(name = ApiConstants.VPC_ID,
+               type = CommandType.UUID,
+               entityType = VpcResponse.class,
+               description = "the ID of the Vpc to update the parameter value for corresponding vpc")
+    private Long vpcId;
+
     // ///////////////////////////////////////////////////
     // ///////////////// Accessors ///////////////////////
     // ///////////////////////////////////////////////////
@@ -133,6 +140,10 @@ public class ListCfgsByCmd extends BaseListCmd {
 
     public Long getNetworkId() {
         return networkId;
+    }
+
+    public Long getVpcId() {
+        return vpcId;
     }
 
     @Override
@@ -186,6 +197,9 @@ public class ListCfgsByCmd extends BaseListCmd {
             }
             if (getNetworkId() != null) {
                 cfgResponse.setScope("network");
+            }
+            if (getVpcId() != null) {
+                cfgResponse.setScope("vpc");
             }
             configResponses.add(cfgResponse);
         }
