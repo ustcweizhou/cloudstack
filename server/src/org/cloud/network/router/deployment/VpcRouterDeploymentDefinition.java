@@ -187,6 +187,20 @@ public class VpcRouterDeploymentDefinition extends RouterDeploymentDefinition {
     }
 
     @Override
+    protected void findAccountServiceOfferingId() {
+        String accountRouterOffering = VirtualNetworkApplianceManager.VirtualRouterServiceOffering.valueIn(vpc.getAccountId());
+        if (accountRouterOffering != null) {
+            ServiceOfferingVO serviceOffering = serviceOfferingDao.findByUuid(accountRouterOffering);
+            if (serviceOffering != null) {
+                boolean isLocalStorage = ConfigurationManagerImpl.SystemVMUseLocalStorage.valueIn(dest.getDataCenter().getId());
+                if (isLocalStorage == serviceOffering.getUseLocalStorage()) {
+                    serviceOfferingId = serviceOffering.getId();
+                }
+            }
+        }
+    }
+
+    @Override
     protected void deployAllVirtualRouters() throws ConcurrentOperationException, InsufficientCapacityException,
     ResourceUnavailableException {
 
