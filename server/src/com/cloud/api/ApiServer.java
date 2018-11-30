@@ -37,6 +37,7 @@ import com.cloud.exception.ResourceUnavailableException;
 import com.cloud.user.Account;
 import com.cloud.user.AccountManager;
 import com.cloud.user.DomainManager;
+import com.cloud.user.TwoStepVerificationManagerImpl;
 import com.cloud.user.User;
 import com.cloud.user.UserAccount;
 import com.cloud.user.UserVO;
@@ -209,6 +210,8 @@ public class ApiServer extends ManagerBase implements HttpRequestHandler, ApiSer
     private EntityManager _entityMgr;
     @Inject
     APIAuthenticationManager _authManager;
+    @Inject
+    TwoStepVerificationManagerImpl _twoStepManager;
 
     List<PluggableService> _pluggableServices;
     List<APIChecker> _apiAccessCheckers;
@@ -941,6 +944,7 @@ public class ApiServer extends ManagerBase implements HttpRequestHandler, ApiSer
     private ResponseObject createLoginResponse(HttpSession session) {
         LoginCmdResponse response = new LoginCmdResponse();
         response.setTimeout(session.getMaxInactiveInterval());
+        response.setTwoStepEnabled(false);
 
         final String user_UUID = (String)session.getAttribute("user_UUID");
         response.setUserId(user_UUID);
@@ -1002,6 +1006,15 @@ public class ApiServer extends ManagerBase implements HttpRequestHandler, ApiSer
 
         final UserAccount userAcct = _accountMgr.authenticateUser(username, password, domainId, loginIpAddress, requestParameters);
         if (userAcct != null) {
+            if (userAcct.getId() != User.UID_ADMIN && _twoStepManager.TwoStepVerificationEnabled.valueIn(userAcct.getAccountId())) {
+                // non-admin users
+                LoginCmdResponse response = new LoginCmdResponse();
+                response.setTwoStepEnabled(true);
+                final UserVO user = (UserVO)_accountMgr.getActiveUser(userAcct.getId());
+                response.setUserId(user.getUuid());
+                return response;
+            }
+
             final String timezone = userAcct.getTimezone();
             float offsetInHrs = 0f;
             if (timezone != null) {

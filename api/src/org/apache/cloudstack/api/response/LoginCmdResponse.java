@@ -66,6 +66,18 @@ public class LoginCmdResponse extends AuthenticationCmdResponse {
     @Param(description = "Session key that can be passed in subsequent Query command calls", isSensitive = true)
     private String sessionKey;
 
+    @SerializedName(value = "twostepenabled")
+    @Param(description = "true if two step verification is enabled for this account, false otherwise")
+    private boolean twoStepEnabled;
+
+    public boolean getTwoStepEnabled() {
+        return twoStepEnabled;
+    }
+
+    public void setTwoStepEnabled(boolean twoStepEnabled) {
+        this.twoStepEnabled = twoStepEnabled;
+    }
+
     public String getUsername() {
         return username;
     }

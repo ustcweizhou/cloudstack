@@ -46,6 +46,8 @@
         <property name="querySelectors" value="#{querySelectorsRegistry.registered}" />        
     </bean>
 
+    <bean id="twoStepVerificationManager" class="com.cloud.user.TwoStepVerificationManagerImpl" />
+
     <bean id="managementServerImpl" class="com.cloud.server.ManagementServerImpl">
         <property name="lockMasterListener" ref="lockMasterListener" />
         <property name="userAuthenticators"
