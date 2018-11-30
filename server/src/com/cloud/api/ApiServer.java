@@ -1082,6 +1082,7 @@ public class ApiServer extends ManagerBase implements HttpRequestHandler, ApiSer
 
         final boolean result = _twoStepManager.authorizeUser(userUuid, Integer.valueOf(verificationCode), loginIpAddress.getHostAddress());
         if (result) {
+            s_logger.debug("Two step verification passed for user " + userUuid + ", creating login response");
             final UserVO user = (UserVO)_accountMgr.getActiveUser(userUuid);
 
             final String timezone = user.getTimezone();

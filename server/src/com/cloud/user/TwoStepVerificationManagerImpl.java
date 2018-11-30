@@ -98,8 +98,9 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         } else {
             throw new CloudRuntimeException("Unable to save secret key of Google Authenticator to database for account " + user.getAccountId());
         }
-        s_logger.debug("Generated verification code: " + key.getVerificationCode());
-        return key.getVerificationCode();
+        int code = gAuth.getTotpPassword(secretKey);
+        s_logger.debug("Generated verification code: " + code);
+        return code;
     }
 
     public String getSecretKey(UserVO user) {
