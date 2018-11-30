@@ -1008,11 +1008,17 @@ public class ApiServer extends ManagerBase implements HttpRequestHandler, ApiSer
         if (userAcct != null) {
             if (userAcct.getId() != User.UID_ADMIN && _twoStepManager.TwoStepVerificationEnabled.valueIn(userAcct.getAccountId())) {
                 // non-admin users
-                LoginCmdResponse response = new LoginCmdResponse();
-                response.setTwoStepEnabled(true);
                 final UserVO user = (UserVO)_accountMgr.getActiveUser(userAcct.getId());
-                response.setUserId(user.getUuid());
-                return response;
+                int result = _twoStepManager.generateAndSendVerificationCode(user.getUuid(), loginIpAddress.getHostAddress());
+                if (result == -1) {
+                    throw new CloudAuthenticationException("Failed to authenticate user " + username + " in domain " + domainId + "; Failed to send SMS for two step verification.");
+                } else if (result > 0) {
+                    LoginCmdResponse response = new LoginCmdResponse();
+                    response.setTwoStepEnabled(true);
+                    response.setUserId(user.getUuid());
+                    response.setResponseName("loginresponse");
+                    return response;
+                }
             }
 
             final String timezone = userAcct.getTimezone();
@@ -1069,6 +1075,70 @@ public class ApiServer extends ManagerBase implements HttpRequestHandler, ApiSer
             return createLoginResponse(session);
         }
         throw new CloudAuthenticationException("Failed to authenticate user " + username + " in domain " + domainId + "; please provide valid credentials");
+    }
+
+    @Override
+    public ResponseObject loginUserWithVerificationCode(final HttpSession session, final String userUuid, final String verificationCode, final InetAddress loginIpAddress) throws CloudAuthenticationException {
+
+        final boolean result = _twoStepManager.authorizeUser(userUuid, Integer.valueOf(verificationCode), loginIpAddress.getHostAddress());
+        if (result) {
+            final UserVO user = (UserVO)_accountMgr.getActiveUser(userUuid);
+
+            final String timezone = user.getTimezone();
+            float offsetInHrs = 0f;
+            if (timezone != null) {
+                final TimeZone t = TimeZone.getTimeZone(timezone);
+                s_logger.info("Current user logged in under " + timezone + " timezone");
+
+                final java.util.Date date = new java.util.Date();
+                final long longDate = date.getTime();
+                final float offsetInMs = (t.getOffset(longDate));
+                offsetInHrs = offsetInMs / (1000 * 60 * 60);
+                s_logger.info("Timezone offset from UTC is: " + offsetInHrs);
+            }
+
+            final Account account = _accountMgr.getAccount(user.getAccountId());
+
+            // set the userId and account object for everyone
+            session.setAttribute("userid", user.getId());
+            if (user.getUuid() != null) {
+                session.setAttribute("user_UUID", user.getUuid());
+            }
+
+            session.setAttribute("username", user.getUsername());
+            session.setAttribute("firstname", user.getFirstname());
+            session.setAttribute("lastname", user.getLastname());
+            session.setAttribute("accountobj", account);
+            session.setAttribute("account", account.getAccountName());
+
+            session.setAttribute("domainid", account.getDomainId());
+            final DomainVO domain = (DomainVO)_domainMgr.getDomain(account.getDomainId());
+            if (domain.getUuid() != null) {
+                session.setAttribute("domain_Name", domain.getName());
+                session.setAttribute("domain_Path", domain.getPath());
+                session.setAttribute("domain_UUID", domain.getUuid());
+            }
+
+            session.setAttribute("type", Short.valueOf(account.getType()).toString());
+            session.setAttribute("registrationtoken", user.getRegistrationToken());
+            session.setAttribute("registered", Boolean.toString(user.isRegistered()));
+
+            if (timezone != null) {
+                session.setAttribute("timezone", timezone);
+                session.setAttribute("timezoneoffset", Float.valueOf(offsetInHrs).toString());
+            }
+
+            // (bug 5483) generate a session key that the user must submit on every request to prevent CSRF, add that
+            // to the login response so that session-based authenticators know to send the key back
+            final SecureRandom sesssionKeyRandom = new SecureRandom();
+            final byte sessionKeyBytes[] = new byte[20];
+            sesssionKeyRandom.nextBytes(sessionKeyBytes);
+            final String sessionKey = Base64.encodeBase64URLSafeString(sessionKeyBytes);
+            session.setAttribute(ApiConstants.SESSIONKEY, sessionKey);
+
+            return createLoginResponse(session);
+        }
+        throw new CloudAuthenticationException("Failed to authenticate user uuid " + userUuid + " with verification code " + verificationCode + "; please provide valid verification code");
     }
 
     @Override

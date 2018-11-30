@@ -52,10 +52,10 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
     /////////////////////////////////////////////////////
     //////////////// API parameters /////////////////////
     /////////////////////////////////////////////////////
-    @Parameter(name = ApiConstants.USERNAME, type = CommandType.STRING, description = "Username", required = true)
+    @Parameter(name = ApiConstants.USERNAME, type = CommandType.STRING, description = "Username")
     private String username;
 
-    @Parameter(name = ApiConstants.PASSWORD, type = CommandType.STRING, description = "Hashed password (Default is MD5). If you wish to use any other hashing algorithm, you would need to write a custom authentication adapter See Docs section.", required = true)
+    @Parameter(name = ApiConstants.PASSWORD, type = CommandType.STRING, description = "Hashed password (Default is MD5). If you wish to use any other hashing algorithm, you would need to write a custom authentication adapter See Docs section.")
     private String password;
 
     @Parameter(name = ApiConstants.DOMAIN, type = CommandType.STRING, description = "Path of the domain that the user belongs to. Example: domain=/com/cloud/internal. If no domain is passed in, the ROOT (/) domain is assumed.")
@@ -63,6 +63,12 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
 
     @Parameter(name = ApiConstants.DOMAIN__ID, type = CommandType.LONG, description = "The id of the domain that the user belongs to. If both domain and domainId are passed in, \"domainId\" parameter takes precendence")
     private Long domainId;
+
+    @Parameter(name = "useruuid", type = CommandType.STRING, description = "Uuid of user")
+    private String userUuid;
+
+    @Parameter(name = "verificationcode", type = CommandType.INTEGER, description = "Verification code")
+    private Integer verificationCode;
 
     @Inject
     ApiServerService _apiServer;
@@ -85,6 +91,14 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
 
     public Long getDomainId() {
         return domainId;
+    }
+
+    public String getUserUuid() {
+        return userUuid;
+    }
+
+    public Integer getVerificationCode() {
+        return verificationCode;
     }
 
     /////////////////////////////////////////////////////
@@ -117,6 +131,9 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
         final String[] username = (String[])params.get(ApiConstants.USERNAME);
         final String[] password = (String[])params.get(ApiConstants.PASSWORD);
         String[] domainIdArr = (String[])params.get(ApiConstants.DOMAIN_ID);
+
+        final String[] userUuid = (String[])params.get("useruuid");
+        final String[] verificationCode = (String[])params.get("verificationcode");
 
         if (domainIdArr == null) {
             domainIdArr = (String[])params.get(ApiConstants.DOMAIN__ID);
@@ -183,7 +200,28 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
                         _apiServer.getSerializedApiError(ApiErrorCode.ACCOUNT_ERROR.getHttpCode(), ex.getMessage() != null ? ex.getMessage()
                                 : "failed to authenticate user, check if username/password are correct", params, responseType);
             }
+        } else if (userUuid != null) {
+            final String code = ((verificationCode == null) ? null : verificationCode[0]);
+            try {
+                final User user = _accountService.getActiveUser(userUuid[0]);
+                if (user == null || !(User.Source.UNKNOWN.equals(user.getSource()) || User.Source.LDAP.equals(user.getSource()))) {
+                    throw new CloudAuthenticationException("User is not allowed CloudStack login");
+                }
+                return ApiResponseSerializer.toSerializedString(_apiServer.loginUserWithVerificationCode(session, userUuid[0], code, remoteAddress), responseType);
+            } catch (final CloudAuthenticationException ex) {
+                // TODO: fall through to API key, or just fail here w/ auth error? (HTTP 401)
+                try {
+                    session.invalidate();
+                } catch (final IllegalStateException ise) {
+                }
+                auditTrailSb.append(" " + ApiErrorCode.ACCOUNT_ERROR + " " + ex.getMessage() != null ? ex.getMessage()
+                        : "failed to authenticate user, check if user uuid and verification code are correct");
+                serializedResponse =
+                        _apiServer.getSerializedApiError(ApiErrorCode.ACCOUNT_ERROR.getHttpCode(), ex.getMessage() != null ? ex.getMessage()
+                                : "failed to authenticate user, check if user uuid and verification code are correct", params, responseType);
+            }
         }
+
         // We should not reach here and if we do we throw an exception
         throw new ServerApiException(ApiErrorCode.ACCOUNT_ERROR, serializedResponse);
     }

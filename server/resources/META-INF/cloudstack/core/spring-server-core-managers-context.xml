@@ -46,6 +46,7 @@
         <property name="querySelectors" value="#{querySelectorsRegistry.registered}" />        
     </bean>
 
+    <bean id="cloudStackCredentialRepository" class="com.cloud.user.CloudStackCredentialRepository" />
     <bean id="twoStepVerificationManager" class="com.cloud.user.TwoStepVerificationManagerImpl" />
 
     <bean id="managementServerImpl" class="com.cloud.server.ManagementServerImpl">

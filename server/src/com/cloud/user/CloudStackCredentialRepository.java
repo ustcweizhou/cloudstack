@@ -18,16 +18,17 @@ package com.cloud.user;
 
 import com.cloud.configuration.ConfigurationManager;
 import com.cloud.user.dao.UserDao;
+import com.cloud.utils.component.ManagerBase;
 import com.cloud.utils.exception.CloudRuntimeException;
-
 import com.warrenstrange.googleauth.ICredentialRepository;
 
 import java.util.List;
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.apache.log4j.Logger;
 
-public class CloudStackCredentialRepository implements ICredentialRepository {
+public class CloudStackCredentialRepository extends ManagerBase implements ICredentialRepository {
     public static final Logger s_logger = Logger.getLogger(CloudStackCredentialRepository.class);
 
     @Inject
@@ -35,25 +36,36 @@ public class CloudStackCredentialRepository implements ICredentialRepository {
     @Inject
     ConfigurationManager _configMgr;
 
+    static UserDao s_userDao;
+    static ConfigurationManager s_configMgr;
+
+    @PostConstruct
+    void init() {
+        s_userDao = _userDao;
+        s_configMgr = _configMgr;
+    }
+
     @Override
     public String getSecretKey(String userUuid) {
-        UserVO user =  _userDao.findByUuid(userUuid);
+        UserVO user = s_userDao.getUser(userUuid);
         if (user == null) {
             s_logger.debug("Cannot find user " + userUuid);
             return null;
         }
-        return TwoStepVerificationSecretKey.valueIn(user.getAccountId());
+        return TwoStepVerificationManagerImpl.TwoStepVerificationSecretKey.valueIn(user.getAccountId());
     }
 
     @Override
     public void saveUserCredentials(String userUuid, String secretKey, int validationCode, List<Integer> scratchCodes) {
-        UserVO user = _userDao.findByUuid(userUuid);
+        UserVO user = s_userDao.getUser(userUuid);
         if (user == null) {
             throw new CloudRuntimeException("Cannot find user " + userUuid);
         }
-        final String updatedValue =_configMgr.updateConfiguration(user.getId(),
-                TwoStepVerificationSecretKey.key(), TwoStepVerificationSecretKey.category(),
-                secretKey, TwoStepVerificationSecretKey.scope().toString(), user.getAccountId());
+        final String updatedValue = s_configMgr.updateConfiguration(user.getId(),
+                TwoStepVerificationManagerImpl.TwoStepVerificationSecretKey.key(),
+                TwoStepVerificationManagerImpl.TwoStepVerificationSecretKey.category(),
+                secretKey, TwoStepVerificationManagerImpl.TwoStepVerificationSecretKey.scope().toString(),
+                user.getAccountId());
         if (secretKey == null && updatedValue == null || updatedValue.equalsIgnoreCase(secretKey)) {
             s_logger.debug("Saved secret key of Google Authenticator to database for account " + user.getAccountId());
         } else {

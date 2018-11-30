@@ -96,6 +96,8 @@ public interface AccountService {
 
     User getActiveUser(long userId);
 
+    User getActiveUser(String userUuid);
+
     User getUserIncludingRemoved(long userId);
 
     boolean isRootAdmin(Long accountId);

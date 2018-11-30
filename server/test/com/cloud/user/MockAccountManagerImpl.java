@@ -170,6 +170,12 @@ public class MockAccountManagerImpl extends ManagerBase implements Manager, Acco
     }
 
     @Override
+    public User getActiveUser(String userUuid) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
     public User getUserIncludingRemoved(long userId) {
         // TODO Auto-generated method stub
         return null;

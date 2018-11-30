@@ -20,6 +20,7 @@ import com.cloud.configuration.ConfigurationManager;
 import com.cloud.user.dao.UserDao;
 import com.cloud.utils.component.Manager;
 import com.cloud.utils.component.ManagerBase;
+import com.cloud.utils.exception.CloudRuntimeException;
 
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
@@ -28,9 +29,7 @@ import com.twilio.type.PhoneNumber;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 
-import java.util.Map;
 import javax.inject.Inject;
-import javax.naming.ConfigurationException;
 
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
@@ -57,11 +56,14 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
 
     public static final ConfigKey<String> TwoStepVerificationSecretKey = new ConfigKey<String>(String.class, "two.step.verification.secret.key", "Advanced", "", "secret key of Google Authenticator in two step verification.", true, ConfigKey.Scope.Account, null);
 
+    public static final ConfigKey<String> TwoStepVerificationClientAddress = new ConfigKey<String>(String.class, "two.step.verification.client.address", "Advanced", "", "client address in two step verification.", true, ConfigKey.Scope.Account, null);
+
     @Override
     public ConfigKey<?>[] getConfigKeys() {
         return new ConfigKey<?>[] { TwoStepVerificationEnabled, TwoStepVerificationTwilioSid,
                 TwoStepVerificationTwilioToken, TwoStepVerificationTwilioFromPhoneNumber,
-                TwoStepVerificationTwilioToPhoneNumber, TwoStepVerificationSecretKey };
+                TwoStepVerificationTwilioToPhoneNumber, TwoStepVerificationSecretKey,
+                TwoStepVerificationClientAddress };
     }
 
     @Override
@@ -69,15 +71,10 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         return TwoStepVerificationManagerImpl.class.getSimpleName();
     }
 
-    @Override
-    public boolean configure(final String name, final Map<String, Object> params) throws ConfigurationException {
-        s_logger.debug("Creating verification code for user w.zhou");
-        int code = generateVerificationCode("fed57d09-c3ae-40b2-abce-4072dd8a7089");
-        s_logger.debug("Geneated verification code for user w.zhou : " + code);
-        return true;
-    }
-
     public boolean sendSMS(String sid, String token, String fromNumber, String toNumber, String body) {
+        //TODO: remove it
+        if (1==1)
+            return true;
         Twilio.init(sid, token);
         Message message = Message.creator(new PhoneNumber(toNumber), new PhoneNumber(fromNumber), body).create();
         if (! StringUtils.isEmpty(message.getSid())){
@@ -89,15 +86,43 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         }
     }
 
-    public int generateVerificationCode(String userUuid) {
+    public int generateVerificationCode(UserVO user) {
         GoogleAuthenticator gAuth = new GoogleAuthenticator();
-        final GoogleAuthenticatorKey key = gAuth.createCredentials(userUuid);
+        GoogleAuthenticatorKey key = gAuth.createCredentials();
+        String secretKey = key.getKey();
+        final String updatedValue = _configMgr.updateConfiguration(user.getId(),
+                TwoStepVerificationSecretKey.key(), TwoStepVerificationSecretKey.category(),
+                secretKey, TwoStepVerificationSecretKey.scope().toString(), user.getAccountId());
+        if (secretKey == null && updatedValue == null || updatedValue.equalsIgnoreCase(secretKey)) {
+            s_logger.debug("Saved secret key of Google Authenticator to database for account " + user.getAccountId());
+        } else {
+            throw new CloudRuntimeException("Unable to save secret key of Google Authenticator to database for account " + user.getAccountId());
+        }
+        s_logger.debug("Generated verification code: " + key.getVerificationCode());
         return key.getVerificationCode();
     }
 
-    public boolean authorizeUser(String userUuid, int verificationCode) {
+    public String getSecretKey(UserVO user) {
+        String secretKey = TwoStepVerificationSecretKey.valueIn(user.getAccountId());
+        if (StringUtils.isEmpty(secretKey)) {
+            throw new CloudRuntimeException("Secret key of Google Authenticator is empty for account " + user.getAccountId());
+        }
+        return secretKey;
+    }
+
+    public boolean authorizeUser(String userUuid, int verificationCode, String clientAddress) {
+        UserVO user = _userDao.findByUuid(userUuid);
+        if (user == null) {
+            s_logger.debug("Cannot find user " + userUuid);
+            throw new CloudRuntimeException("Cannot find user " + userUuid);
+        }
+        String clientAddressInDB = TwoStepVerificationClientAddress.valueIn(user.getAccountId());
+        if (! clientAddressInDB.equals(clientAddress)) {
+            throw new CloudRuntimeException("client address " + clientAddress + " is different from last request");
+        }
         GoogleAuthenticator gAuth = new GoogleAuthenticator();
-        boolean isCodeValid = gAuth.authorizeUser(userUuid, verificationCode);
+        String secretKey = getSecretKey(user);
+        boolean isCodeValid = gAuth.authorize(secretKey, verificationCode);
         if (isCodeValid) {
             s_logger.debug("Two step verification passed for user " + userUuid);
         } else {
@@ -106,17 +131,28 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         return isCodeValid;
     }
 
-    public int generateAndSendVerificationCode(String userUuid) {
-        UserVO user =  _userDao.findByUuid(userUuid);
+    public int generateAndSendVerificationCode(String userUuid, String clientAddress) {
+        UserVO user = _userDao.findByUuid(userUuid);
         if (user == null) {
             s_logger.debug("Cannot find user " + userUuid);
-            return -1;
+            throw new CloudRuntimeException("Cannot find user " + userUuid);
         }
         if (! TwoStepVerificationEnabled.valueIn(user.getAccountId())) {
             return 0;
         }
 
-        int code = generateVerificationCode(userUuid);
+        // save client address
+        final String updatedClientAddress = _configMgr.updateConfiguration(user.getId(),
+                TwoStepVerificationClientAddress.key(), TwoStepVerificationClientAddress.category(),
+                clientAddress, TwoStepVerificationClientAddress.scope().toString(), user.getAccountId());
+        if (clientAddress == null && updatedClientAddress == null || updatedClientAddress.equalsIgnoreCase(clientAddress)) {
+            s_logger.debug("Saved client address to database for account " + user.getAccountId());
+        } else {
+            throw new CloudRuntimeException("Unable to save client address to database for account " + user.getAccountId());
+        }
+
+        int code = generateVerificationCode(user);
+        // TODO: get toNumber from user details
         String toNumber = TwoStepVerificationTwilioToPhoneNumber.valueIn(user.getAccountId());
         if (StringUtils.isEmpty(toNumber)) {
             return 0;
@@ -124,7 +160,7 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         boolean result = sendSMS(TwoStepVerificationTwilioSid.value(), TwoStepVerificationTwilioToken.value(),
                 TwoStepVerificationTwilioFromPhoneNumber.value(), toNumber, String.valueOf(code));
         if (result) {
-            return 1;
+            return code;
         } else {
             return -1;
         }

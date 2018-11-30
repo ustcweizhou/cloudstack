@@ -247,6 +247,51 @@
                     async: false,
                     success: function(json) {
                         var loginresponse = json.loginresponse;
+                        var loginsuccess = false;
+                        var twostep = loginresponse.twostepenabled;
+                        if (twostep != null && twostep) {
+                            cloudStack.dialog.createForm({
+                                form: {
+                                    title: 'Verification code',
+                                    desc: 'Please input the verification code you received via SMS',
+                                    fields: {
+                                        code: {
+                                            label: 'label.code',
+                                            validation: { required: true, number: true }
+                                        }
+                                    }
+                                },
+                                after: function(args) {
+                                    $.ajax({
+                                        url: createURL('login'),
+                                        data: {
+                                            useruuid: loginresponse.userid,
+                                            verificationcode: args.data.code
+                                        },
+                                        dataType: "json",
+                                        type: "POST",
+                                        success: function(json) {
+                                            loginsuccess = true;
+                                            loginresponse = json.loginresponse;
+                                        },
+                                        error: function(json) {
+                                            cloudStack.dialog.notice({
+                                                message: "Please input valid verification code"
+                                            });
+                                            if (onLogoutCallback()) {
+                                                document.location.reload();
+                                            }
+                                        }
+                                    });
+                                },
+                                context: {}
+                            });
+                        } else {
+                            loginsuccess = true;
+                        }
+
+                      if (loginsuccess) {
+
                         // sessionkey is recevied as a HttpOnly cookie
                         // therefore reset any g_sessionKey value, an explicit
                         // param in the API call is no longer needed
@@ -319,6 +364,7 @@
                                 args.response.error();
                             }
                         });
+                      }
 
                         // Get project configuration
                         // TEMPORARY -- replace w/ output of capability response, etc., once implemented
