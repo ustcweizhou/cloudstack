@@ -74,6 +74,11 @@
                                 <label for="domain"><fmt:message key="label.domain"/></label>
                                 <input type="text" name="domain" />
                             </div>
+                            <!-- verification code -->
+                            <div class="field verificationcode">
+                                <label for="verificationcode">Verification Code via SMS</label>
+                                <input type="text" name="verificationcode" />
+                            </div>
                         </div>
 
                         <div id="login-submit">

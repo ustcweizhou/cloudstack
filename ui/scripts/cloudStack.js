@@ -238,6 +238,13 @@
                     array1.push("&domain=" + encodeURIComponent("/"));
                 }
 
+                if (args.data.verificationcode != null && args.data.verificationcode.length > 0) {
+                    if (g_userid != null) {
+                        array1.push("&userid=" + encodeURIComponent(g_userid));
+                        array1.push("&verificationcode=" + encodeURIComponent(args.data.verificationcode));
+                    }
+                }
+
                 var loginCmdText = array1.join("");
 
                 $.ajax({
@@ -247,50 +254,14 @@
                     async: false,
                     success: function(json) {
                         var loginresponse = json.loginresponse;
-                        var loginsuccess = false;
                         var twostep = loginresponse.twostepenabled;
                         if (twostep != null && twostep) {
-                            cloudStack.dialog.createForm({
-                                form: {
-                                    title: 'Verification code',
-                                    desc: 'Please input the verification code you received via SMS',
-                                    fields: {
-                                        code: {
-                                            label: 'label.code',
-                                            validation: { required: true, number: true }
-                                        }
-                                    }
-                                },
-                                after: function(args) {
-                                    $.ajax({
-                                        url: createURL('login'),
-                                        data: {
-                                            useruuid: loginresponse.userid,
-                                            verificationcode: args.data.code
-                                        },
-                                        dataType: "json",
-                                        type: "POST",
-                                        success: function(json) {
-                                            loginsuccess = true;
-                                            loginresponse = json.loginresponse;
-                                        },
-                                        error: function(json) {
-                                            cloudStack.dialog.notice({
-                                                message: "Please input valid verification code"
-                                            });
-                                            if (onLogoutCallback()) {
-                                                document.location.reload();
-                                            }
-                                        }
-                                    });
-                                },
-                                context: {}
+                            g_userid = loginresponse.userid;
+                            $.cookie('userid', g_userid, {
+                                 expires: 1
                             });
-                        } else {
-                            loginsuccess = true;
+                            args.response.error("Please input verification code sent via SMS");
                         }
-
-                      if (loginsuccess) {
 
                         // sessionkey is recevied as a HttpOnly cookie
                         // therefore reset any g_sessionKey value, an explicit
@@ -364,7 +335,6 @@
                                 args.response.error();
                             }
                         });
-                      }
 
                         // Get project configuration
                         // TEMPORARY -- replace w/ output of capability response, etc., once implemented

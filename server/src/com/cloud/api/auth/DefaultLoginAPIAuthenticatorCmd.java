@@ -64,7 +64,7 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
     @Parameter(name = ApiConstants.DOMAIN__ID, type = CommandType.LONG, description = "The id of the domain that the user belongs to. If both domain and domainId are passed in, \"domainId\" parameter takes precendence")
     private Long domainId;
 
-    @Parameter(name = "useruuid", type = CommandType.STRING, description = "Uuid of user")
+    @Parameter(name = ApiConstants.USER_ID, type = CommandType.STRING, description = "Uuid of user")
     private String userUuid;
 
     @Parameter(name = "verificationcode", type = CommandType.INTEGER, description = "Verification code")
@@ -132,7 +132,7 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
         final String[] password = (String[])params.get(ApiConstants.PASSWORD);
         String[] domainIdArr = (String[])params.get(ApiConstants.DOMAIN_ID);
 
-        final String[] userUuid = (String[])params.get("useruuid");
+        final String[] userUuid = (String[])params.get(ApiConstants.USER_ID);
         final String[] verificationCode = (String[])params.get("verificationcode");
 
         if (domainIdArr == null) {
@@ -173,7 +173,7 @@ public class DefaultLoginAPIAuthenticatorCmd extends BaseCmd implements APIAuthe
         }
 
         String serializedResponse = null;
-        if (username != null) {
+        if (userUuid == null && username != null) {
             final String pwd = ((password == null) ? null : password[0]);
             try {
                 final Domain userDomain = _domainService.findDomainByIdOrPath(domainId, domain);
