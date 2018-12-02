@@ -177,6 +177,11 @@ public class MockAccountManager extends ManagerBase implements AccountManager {
     }
 
     @Override
+    public User getActiveUser(String userUuid) {
+        return _systemUser;
+    }
+
+    @Override
     public User getActiveUserByRegistrationToken(String arg0) {
         // TODO Auto-generated method stub
         return null;
