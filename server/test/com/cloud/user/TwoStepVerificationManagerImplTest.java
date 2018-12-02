@@ -17,32 +17,134 @@
 package com.cloud.user;
 
 import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
+import com.warrenstrange.googleauth.GoogleAuthenticatorConfig.GoogleAuthenticatorConfigBuilder;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import javax.mail.Authenticator;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 import org.junit.Test;
 
+import com.cloud.user.TwoStepVerificationManagerImpl.EmailManager;
+
 public class TwoStepVerificationManagerImplTest {
     @Test
-    public void generateAndVerifyCode() {
+    public void generateAndVerifyCode1() {
         // mvn -P developer,systemvm -pl server -Dtest=com.cloud.user.TwoStepVerificationManagerImplTest
         GoogleAuthenticator gAuth = new GoogleAuthenticator();
         GoogleAuthenticatorKey key = gAuth.createCredentials();
         String secretKey = key.getKey();
         int code = gAuth.getTotpPassword(secretKey);
-        System.out.println("secret key is " + secretKey + ", verification code is " + code);
+        System.out.println("Test 1: secret key is " + secretKey + ", verification code is " + code);
+
+        long now = new Date().getTime();
 
         for (int i = 0; i < 120; i++) {
-            boolean isCodeValid = gAuth.authorize(secretKey, code);
+            boolean isCodeValid = gAuth.authorize(secretKey, code, now + i * 1000);
             if (isCodeValid) {
-                System.out.println("Two step verification passed after " + i + "s");
+                System.out.println("Test 1: Two step verification passed after " + i + "s");
             } else {
-                System.out.println("Two step verification did not pass after " + i + "s");
+                System.out.println("Test 1: Two step verification did not pass after " + i + "s");
                 break;
             }
-            try {
-                Thread.sleep(1000);
-            } catch (Exception e) {
+        }
+    }
+
+    @Test
+    public void generateAndVerifyCode2() {
+        // mvn -P developer,systemvm -pl server -Dtest=com.cloud.user.TwoStepVerificationManagerImplTest
+        GoogleAuthenticatorConfigBuilder builder = new GoogleAuthenticatorConfigBuilder();
+        builder.setCodeDigits(8);
+        builder.setTimeStepSizeInMillis(TimeUnit.SECONDS.toMillis(60));
+        GoogleAuthenticatorConfig config = builder.build();
+        GoogleAuthenticator gAuth = new GoogleAuthenticator(config);
+        GoogleAuthenticatorKey key = gAuth.createCredentials();
+        String secretKey = key.getKey();
+        int code = gAuth.getTotpPassword(secretKey);
+        System.out.println("Test 2: secret key is " + secretKey + ", verification code is " + code);
+
+        long now = new Date().getTime();
+
+        for (int i = 0; i < 120; i++) {
+            boolean isCodeValid = gAuth.authorize(secretKey, code, now + i * 1000);
+            if (isCodeValid) {
+                System.out.println("Test 2: Two step verification passed after " + i + "s");
+            } else {
+                System.out.println("Test 2: Two step verification did not pass after " + i + "s");
+                break;
             }
         }
+    }
+
+    @Test
+    public void sendEmailviaGmail() {
+        final String d_email = "leasewebcloud@gmail.com";
+        final String d_uname = "leasewebcloud@gmail.com";
+        final String d_password = "cloudstack";
+        final String d_host = "smtp.gmail.com";
+        final int d_port  = 465;
+        String m_to = "w.zhou@global.leaseweb.com";
+        String m_subject = "send Email via Gmail";
+        String m_text = "This message is from Leaseweb Cloud";
+        Properties props = new Properties();
+        props.put("mail.smtp.user", d_email);
+        props.put("mail.smtp.host", d_host);
+        props.put("mail.smtp.port", d_port);
+        props.put("mail.smtp.starttls.enable","true");
+        props.put("mail.smtp.debug", "true");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.socketFactory.port", d_port);
+        props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        props.put("mail.smtp.socketFactory.fallback", "false");
+
+        Session session = Session.getInstance(props, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(d_uname, d_password);
+            }
+        });
+
+        session.setDebug(true);
+
+        MimeMessage msg = new MimeMessage(session);
+        try {
+            msg.setSubject(m_subject);
+            msg.setFrom(new InternetAddress(d_email));
+            msg.addRecipient(Message.RecipientType.TO, new InternetAddress(m_to));
+            msg.setText("test email via gmail");
+
+            Transport transport = session.getTransport("smtps");
+            transport.connect(d_host, d_port, d_uname, d_password);
+            transport.sendMessage(msg, msg.getAllRecipients());
+            transport.close();
+
+        } catch (AddressException e) {
+            e.printStackTrace();
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void sendEmailviaEmailManager() throws UnsupportedEncodingException, MessagingException {
+        EmailManager emailManager = new EmailManager("smtp.gmail.com", 465, 30000, 30000, true, true,
+                "leasewebcloud@gmail.com", "cloudstack", "leasewebcloud@gmail.com", true);
+        List<String> recipientList = new ArrayList<String>();
+        recipientList.add("w.zhou@global.leaseweb.com");
+        emailManager.sendEmail(recipientList, "this is email for testing", "this is content");
     }
 }

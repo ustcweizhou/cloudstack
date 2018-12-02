@@ -20,6 +20,7 @@ import com.cloud.configuration.ConfigurationManager;
 import com.cloud.user.dao.UserDao;
 import com.cloud.utils.component.Manager;
 import com.cloud.utils.component.ManagerBase;
+import com.cloud.utils.concurrency.NamedThreadFactory;
 import com.cloud.utils.exception.CloudRuntimeException;
 
 import com.twilio.Twilio;
@@ -30,6 +31,27 @@ import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 
 import javax.inject.Inject;
+import javax.mail.Authenticator;
+import javax.mail.Message.RecipientType;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.SendFailedException;
+import javax.mail.Session;
+import javax.mail.URLName;
+import javax.mail.internet.InternetAddress;
+import javax.naming.ConfigurationException;
+
+import com.sun.mail.smtp.SMTPMessage;
+import com.sun.mail.smtp.SMTPSSLTransport;
+import com.sun.mail.smtp.SMTPTransport;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
@@ -38,6 +60,8 @@ import org.apache.log4j.Logger;
 
 public class TwoStepVerificationManagerImpl extends ManagerBase implements Manager, Configurable {
     public static final Logger s_logger = Logger.getLogger(TwoStepVerificationManagerImpl.class);
+
+    private static EmailManager emailManager;
 
     @Inject
     UserDao _userDao;
@@ -69,6 +93,145 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
     @Override
     public String getConfigComponentName() {
         return TwoStepVerificationManagerImpl.class.getSimpleName();
+    }
+
+    @Override
+    public boolean configure(String name, Map<String, Object> params) throws ConfigurationException {
+        emailManager = new EmailManager("smtp.gmail.com", 465, 30000, 30000, true, true,
+                "leasewebcloud@gmail.com", "cloudstack", "leasewebcloud@gmail.com", false);
+
+        return true;
+    }
+
+    static class EmailManager {
+        private Session _smtpSession;
+        private InternetAddress[] _recipientList;
+        private final String _smtpHost;
+        private int _smtpPort = -1;
+        private boolean _smtpUseAuth = false;
+        private boolean _smtpSslAuth = false;
+        private final String _smtpUsername;
+        private final String _smtpPassword;
+        private final String _emailSender;
+        private int _smtpTimeout;
+        private int _smtpConnectionTimeout;
+
+        private ExecutorService _executor;
+
+        public EmailManager(final String smtpHost, final int smtpPort, final int smtpConnectionTimeout,
+                final int smtpTimeout, final boolean smtpUseAuth, final boolean smtpSslAuth, final String smtpUsername,
+                final String smtpPassword, String emailSender, boolean smtpDebug) {
+
+            _smtpHost = smtpHost;
+            _smtpPort = smtpPort;
+            _smtpUseAuth = smtpUseAuth;
+            _smtpSslAuth = smtpSslAuth;
+            _smtpUsername = smtpUsername;
+            _smtpPassword = smtpPassword;
+            _emailSender = emailSender;
+            _smtpTimeout = smtpTimeout;
+            _smtpConnectionTimeout = smtpConnectionTimeout;
+
+            if (_smtpHost != null) {
+                Properties smtpProps = new Properties();
+                smtpProps.put("mail.smtp.host", smtpHost);
+                smtpProps.put("mail.smtp.port", smtpPort);
+                smtpProps.put("mail.smtp.auth", "" + smtpUseAuth);
+                smtpProps.put("mail.smtp.timeout", _smtpTimeout);
+                smtpProps.put("mail.smtp.connectiontimeout", _smtpConnectionTimeout);
+
+                if (smtpUsername != null) {
+                    smtpProps.put("mail.smtp.user", smtpUsername);
+                }
+
+                smtpProps.put("mail.smtps.host", smtpHost);
+                smtpProps.put("mail.smtps.port", smtpPort);
+                smtpProps.put("mail.smtps.auth", "" + smtpUseAuth);
+                smtpProps.put("mail.smtps.timeout", _smtpTimeout);
+                smtpProps.put("mail.smtps.connectiontimeout", _smtpConnectionTimeout);
+
+                if (smtpUsername != null) {
+                    smtpProps.put("mail.smtps.user", smtpUsername);
+                }
+
+                if (("smtp.gmail.com").equals(smtpHost)) {
+                    smtpProps.setProperty("mail.smtp.starttls.enable","true");
+                    smtpProps.put("mail.smtp.socketFactory.port",String.valueOf(smtpPort));
+                    smtpProps.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    smtpProps.put("mail.smtp.socketFactory.fallback","false");
+                }
+
+                if ((smtpUsername != null) && (smtpPassword != null)) {
+                    _smtpSession = Session.getInstance(smtpProps, new Authenticator() {
+                        @Override
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(smtpUsername, smtpPassword);
+                        }
+                    });
+                } else {
+                    _smtpSession = Session.getInstance(smtpProps);
+                }
+                _smtpSession.setDebug(smtpDebug);
+            } else {
+                _smtpSession = null;
+            }
+
+            _executor = Executors.newCachedThreadPool(new NamedThreadFactory("Email-Sender"));
+        }
+
+        public void sendEmail(List<String> recipientList, String subject, String content) throws UnsupportedEncodingException, MessagingException {
+            s_logger.warn("Sending email to " + recipientList);
+            InternetAddress[] recipient = null;
+            if (recipientList != null) {
+                recipient = new InternetAddress[recipientList.size()];
+                int cnt = 0;
+                for (String recipientInList: recipientList) {
+                    try {
+                        recipient[cnt++] = new InternetAddress(recipientInList, recipientInList);
+                    } catch (Exception ex) {
+                        s_logger.error("Exception creating address for: " + recipientInList, ex);
+                    }
+                }
+            }
+            if (_smtpSession != null) {
+                SMTPMessage msg = new SMTPMessage(_smtpSession);
+                msg.setSender(new InternetAddress(_emailSender, _emailSender));
+                msg.setFrom(new InternetAddress(_emailSender, _emailSender));
+                for (InternetAddress address : recipient) {
+                    msg.addRecipient(RecipientType.TO, address);
+                }
+                msg.setSubject(subject);
+                msg.setSentDate(new Date());
+                msg.setContent(content, "text/html");
+                msg.saveChanges();
+
+                SMTPTransport smtpTrans = null;
+                if (_smtpSslAuth) {
+                    smtpTrans = new SMTPSSLTransport(_smtpSession, new URLName("smtps", _smtpHost, _smtpPort, null, _smtpUsername, _smtpPassword));
+                } else {
+                    smtpTrans = new SMTPTransport(_smtpSession, new URLName("smtp", _smtpHost, _smtpPort, null, _smtpUsername, _smtpPassword));
+                }
+                sendMessage(smtpTrans, msg);
+                s_logger.debug("Done sending email to " + recipientList);
+            }
+        }
+
+        private void sendMessage(final SMTPTransport smtpTrans, final SMTPMessage msg) {
+            _executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        smtpTrans.connect();
+                        smtpTrans.sendMessage(msg, msg.getAllRecipients());
+                        smtpTrans.close();
+                    } catch (SendFailedException e) {
+                        s_logger.error(" Failed to send email due to " + e);
+                    } catch (MessagingException e) {
+                        s_logger.error(" Failed to send email due to " + e);
+                    }
+                }
+            });
+        }
     }
 
     public boolean sendSMS(String sid, String token, String fromNumber, String toNumber, String body) {

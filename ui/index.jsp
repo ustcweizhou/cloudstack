@@ -76,7 +76,7 @@
                             </div>
                             <!-- verification code -->
                             <div class="field verificationcode">
-                                <label for="verificationcode">Verification Code via SMS</label>
+                                <label for="verificationcode">Verification Code via SMS or Email</label>
                                 <input type="text" name="verificationcode" />
                             </div>
                         </div>
