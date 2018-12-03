@@ -16,6 +16,10 @@
 // under the License.
 package com.cloud.user;
 
+import com.twilio.Twilio;
+import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.type.PhoneNumber;
+
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
 import com.warrenstrange.googleauth.GoogleAuthenticatorConfig.GoogleAuthenticatorConfigBuilder;
@@ -28,7 +32,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import javax.mail.Authenticator;
-import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
@@ -115,6 +118,29 @@ public class TwoStepVerificationManagerImplTest {
     }
 
     @Test
+    public void generateAndSentCode3() {
+        GoogleAuthenticatorConfigBuilder builder = new GoogleAuthenticatorConfigBuilder();
+        builder.setCodeDigits(8);
+        builder.setTimeStepSizeInMillis(TimeUnit.SECONDS.toMillis(60));
+        GoogleAuthenticatorConfig config = builder.build();
+        GoogleAuthenticator gAuth = new GoogleAuthenticator(config);
+        GoogleAuthenticatorKey key = gAuth.createCredentials();
+        String secretKey = key.getKey();
+        int code = gAuth.getTotpPassword(secretKey);
+        System.out.println("Test 3: secret key is " + secretKey + ", verification code is " + code);
+
+        String sid = "AC8e90ade0e3240e50fc9ce2dc9f50a54e";
+        String token = "0a9170c914a8876f01765368080b3ac9";
+        String toNumber = "+31615855099";
+        String fromNumber = "+18102029336";
+        String body = "verfication code is " + code;
+
+        Twilio.init(sid, token);
+        Message message = Message.creator(new PhoneNumber(toNumber), new PhoneNumber(fromNumber), body).create();
+        System.out.println("Message sent, sid is " + message.getSid());
+    }
+
+    @Test
     public void sendEmailviaGmail() {
         final String d_email = "leasewebcloud@gmail.com";
         final String d_uname = "leasewebcloud@gmail.com";
@@ -148,7 +174,7 @@ public class TwoStepVerificationManagerImplTest {
         try {
             msg.setSubject(m_subject);
             msg.setFrom(new InternetAddress(d_email));
-            msg.addRecipient(Message.RecipientType.TO, new InternetAddress(m_to));
+            msg.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(m_to));
             msg.setText("test email via gmail");
 
             Transport transport = session.getTransport("smtps");
@@ -181,7 +207,7 @@ public class TwoStepVerificationManagerImplTest {
         SMTPMessage msg = new SMTPMessage(session);
         msg.setSender(new InternetAddress(d_email, d_email));
         msg.setFrom(new InternetAddress(d_email, d_email));
-        msg.addRecipient(Message.RecipientType.TO, new InternetAddress(m_to));
+        msg.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(m_to));
 
         msg.setSubject(m_subject);
         msg.setSentDate(new Date());
