@@ -33,15 +33,39 @@ import javax.mail.MessagingException;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
+import javax.mail.URLName;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import com.sun.mail.smtp.SMTPMessage;
+import com.sun.mail.smtp.SMTPSSLTransport;
+import com.sun.mail.smtp.SMTPTransport;
+
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.cloud.user.TwoStepVerificationManagerImpl.EmailManager;
 
 public class TwoStepVerificationManagerImplTest {
+
+    EmailManager emailManager;
+
+    @Before
+    public void setUp() {
+        emailManager = new EmailManager("smtp.gmail.com", 465, 30000, 30000, true, true,
+                "leasewebcloud@gmail.com", "cloudstack", "leasewebcloud@gmail.com", true);
+    }
+
+    @After
+    public void tearDown() {
+        try {
+            Thread.sleep(5000);
+        } catch (Exception e) {
+        }
+    }
+
     @Test
     public void generateAndVerifyCode1() {
         // mvn -P developer,systemvm -pl server -Dtest=com.cloud.user.TwoStepVerificationManagerImplTest
@@ -97,9 +121,9 @@ public class TwoStepVerificationManagerImplTest {
         final String d_password = "cloudstack";
         final String d_host = "smtp.gmail.com";
         final int d_port  = 465;
-        String m_to = "w.zhou@global.leaseweb.com";
-        String m_subject = "send Email via Gmail";
-        String m_text = "This message is from Leaseweb Cloud";
+        final String m_to = "w.zhou@global.leaseweb.com";
+        final String m_subject = "send Email via Gmail";
+        final String m_text = "This message is from Leaseweb Cloud";
         Properties props = new Properties();
         props.put("mail.smtp.user", d_email);
         props.put("mail.smtp.host", d_host);
@@ -128,9 +152,9 @@ public class TwoStepVerificationManagerImplTest {
             msg.setText("test email via gmail");
 
             Transport transport = session.getTransport("smtps");
-            transport.connect(d_host, d_port, d_uname, d_password);
-            transport.sendMessage(msg, msg.getAllRecipients());
-            transport.close();
+//            transport.connect(d_host, d_port, d_uname, d_password);
+//            transport.sendMessage(msg, msg.getAllRecipients());
+//            transport.close();
 
         } catch (AddressException e) {
             e.printStackTrace();
@@ -140,11 +164,47 @@ public class TwoStepVerificationManagerImplTest {
     }
 
     @Test
-    public void sendEmailviaEmailManager() throws UnsupportedEncodingException, MessagingException {
-        EmailManager emailManager = new EmailManager("smtp.gmail.com", 465, 30000, 30000, true, true,
-                "leasewebcloud@gmail.com", "cloudstack", "leasewebcloud@gmail.com", true);
+    public void sendEmailviaEmailManagerSession() throws UnsupportedEncodingException, MessagingException {
         List<String> recipientList = new ArrayList<String>();
         recipientList.add("w.zhou@global.leaseweb.com");
-        emailManager.sendEmail(recipientList, "this is email for testing", "this is content");
+
+        final String d_email = "leasewebcloud@gmail.com";
+        final String d_uname = "leasewebcloud@gmail.com";
+        final String d_password = "cloudstack";
+        final String d_host = "smtp.gmail.com";
+        final int d_port  = 465;
+        final String m_to = "w.zhou@global.leaseweb.com";
+        final String m_subject = "send Email via email manager session";
+        final String m_text = "This message is from Leaseweb Cloud";
+
+        Session session = emailManager.getSession();
+        SMTPMessage msg = new SMTPMessage(session);
+        msg.setSender(new InternetAddress(d_email, d_email));
+        msg.setFrom(new InternetAddress(d_email, d_email));
+        msg.addRecipient(Message.RecipientType.TO, new InternetAddress(m_to));
+
+        msg.setSubject(m_subject);
+        msg.setSentDate(new Date());
+        msg.setContent(m_text, "text/html");
+        msg.saveChanges();
+
+        SMTPTransport smtpTrans = null;
+        boolean _smtpSslAuth = true;
+        if (_smtpSslAuth) {
+            smtpTrans = new SMTPSSLTransport(session, new URLName("smtps", d_host, d_port, null, d_uname, d_password));
+        } else {
+            smtpTrans = new SMTPTransport(session, new URLName("smtp", d_host, d_port, null, d_uname, d_password));
+        }
+//        smtpTrans.connect();
+//        smtpTrans.sendMessage(msg, msg.getAllRecipients());
+//        smtpTrans.close();
+    }
+
+    @Test
+    public void sendEmailviaEmailManager() throws UnsupportedEncodingException, MessagingException {
+        List<String> recipientList = new ArrayList<String>();
+        recipientList.add("w.zhou@global.leaseweb.com");
+
+        emailManager.sendEmail(recipientList, "send Email via email manager", "this is content<br><hr>second part<hr>third part<li>aa</li><li>bb</li>");
     }
 }

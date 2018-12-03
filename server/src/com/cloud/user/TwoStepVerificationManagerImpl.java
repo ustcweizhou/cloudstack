@@ -118,6 +118,10 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
 
         private ExecutorService _executor;
 
+        public Session getSession() {
+            return _smtpSession;
+        }
+
         public EmailManager(final String smtpHost, final int smtpPort, final int smtpConnectionTimeout,
                 final int smtpTimeout, final boolean smtpUseAuth, final boolean smtpSslAuth, final String smtpUsername,
                 final String smtpPassword, String emailSender, boolean smtpDebug) {
@@ -155,7 +159,7 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
                 }
 
                 if (("smtp.gmail.com").equals(smtpHost)) {
-                    smtpProps.setProperty("mail.smtp.starttls.enable","true");
+                    smtpProps.put("mail.smtp.starttls.enable","true");
                     smtpProps.put("mail.smtp.socketFactory.port",String.valueOf(smtpPort));
                     smtpProps.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
                     smtpProps.put("mail.smtp.socketFactory.fallback","false");
