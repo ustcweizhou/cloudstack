@@ -45,7 +45,6 @@ import com.sun.mail.smtp.SMTPMessage;
 import com.sun.mail.smtp.SMTPSSLTransport;
 import com.sun.mail.smtp.SMTPTransport;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -53,20 +52,12 @@ import com.cloud.user.TwoStepVerificationManagerImpl.EmailManager;
 
 public class TwoStepVerificationManagerImplTest {
 
-    EmailManager emailManager;
+    static EmailManager emailManager;
 
     @Before
     public void setUp() {
         emailManager = new EmailManager("smtp.gmail.com", 465, 30000, 30000, true, true,
                 "leasewebcloud@gmail.com", "cloudstack", "leasewebcloud@gmail.com", true);
-    }
-
-    @After
-    public void tearDown() {
-        try {
-            Thread.sleep(5000);
-        } catch (Exception e) {
-        }
     }
 
     @Test

@@ -51,8 +51,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
@@ -106,6 +110,32 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         return true;
     }
 
+    static class SendEmailAsync implements Callable<Boolean> {
+        private SMTPTransport smtpTrans;
+        private SMTPMessage msg;
+
+        public SendEmailAsync(final SMTPTransport smtpTrans, final SMTPMessage msg) {
+            this.smtpTrans = smtpTrans;
+            this.msg = msg;
+        }
+
+        @Override
+        public Boolean call() {
+            try {
+                smtpTrans.connect();
+                smtpTrans.sendMessage(msg, msg.getAllRecipients());
+                smtpTrans.close();
+            } catch (SendFailedException e) {
+                s_logger.error(" Failed to send email due to " + e);
+                return false;
+            } catch (MessagingException e) {
+                s_logger.error(" Failed to send email due to " + e);
+                return false;
+            }
+            return true;
+        }
+    }
+
     static class EmailManager {
         private Session _smtpSession;
         private InternetAddress[] _recipientList;
@@ -119,7 +149,8 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         private int _smtpTimeout;
         private int _smtpConnectionTimeout;
 
-        private ExecutorService _executor;
+        private static ExecutorService executor;
+        private static ExecutorCompletionService<Boolean> completionService;
 
         public Session getSession() {
             return _smtpSession;
@@ -183,10 +214,11 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
                 _smtpSession = null;
             }
 
-            _executor = Executors.newCachedThreadPool(new NamedThreadFactory("Email-Sender"));
+            executor = Executors.newCachedThreadPool(new NamedThreadFactory("Email-Sender"));
+            completionService = new ExecutorCompletionService<Boolean>(executor);
         }
 
-        public void sendEmail(List<String> recipientList, String subject, String content) throws UnsupportedEncodingException, MessagingException {
+        public boolean sendEmail(List<String> recipientList, String subject, String content) throws UnsupportedEncodingException, MessagingException {
             s_logger.warn("Sending email to " + recipientList);
             InternetAddress[] recipient = null;
             if (recipientList != null) {
@@ -218,26 +250,25 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
                 } else {
                     smtpTrans = new SMTPTransport(_smtpSession, new URLName("smtp", _smtpHost, _smtpPort, null, _smtpUsername, _smtpPassword));
                 }
-                sendMessage(smtpTrans, msg);
+                boolean result = sendMessage(smtpTrans, msg);
                 s_logger.debug("Done sending email to " + recipientList);
+                return result;
+            } else {
+                s_logger.debug("Failed to send email as SMTP session does not exist");
+                return false;
             }
         }
 
-        private void sendMessage(final SMTPTransport smtpTrans, final SMTPMessage msg) {
-            _executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        smtpTrans.connect();
-                        smtpTrans.sendMessage(msg, msg.getAllRecipients());
-                        smtpTrans.close();
-                    } catch (SendFailedException e) {
-                        s_logger.error(" Failed to send email due to " + e);
-                    } catch (MessagingException e) {
-                        s_logger.error(" Failed to send email due to " + e);
-                    }
-                }
-            });
+        private boolean sendMessage(final SMTPTransport smtpTrans, final SMTPMessage msg) {
+            try {
+                completionService.submit(new SendEmailAsync(smtpTrans, msg));
+                Future<Boolean> future = completionService.take();
+                return future.get();
+            } catch (final InterruptedException ie) {
+                return false;
+            } catch (final ExecutionException ie) {
+                return false;
+            }
         }
     }
 
@@ -340,7 +371,10 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
             List<String> recipientList = new ArrayList<String>();
             recipientList.add(toEmail);
             try {
-                emailManager.sendEmail(recipientList, subject, body);
+                boolean result = emailManager.sendEmail(recipientList, subject, body);
+                if (!result) {
+                    return -1;
+                }
             } catch (UnsupportedEncodingException e1) {
                 s_logger.debug("Failed to sent email to " + recipientList);
             } catch (MessagingException e2) {

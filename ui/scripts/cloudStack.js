@@ -260,7 +260,7 @@
                             $.cookie('userid', g_userid, {
                                  expires: 1
                             });
-                            args.response.error("Please input verification code sent via SMS");
+                            args.response.error("Two step verification is enabled. Please input verification code sent via SMS or Email");
                         }
 
                         // sessionkey is recevied as a HttpOnly cookie
