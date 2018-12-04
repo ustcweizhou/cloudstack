@@ -16,9 +16,9 @@
 // under the License.
 package com.cloud.user;
 
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
+//import com.twilio.Twilio;
+//import com.twilio.rest.api.v2010.account.Message;
+//import com.twilio.type.PhoneNumber;
 
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
@@ -135,9 +135,9 @@ public class TwoStepVerificationManagerImplTest {
         String fromNumber = "+18102029336";
         String body = "verfication code is " + code;
 
-        Twilio.init(sid, token);
-        Message message = Message.creator(new PhoneNumber(toNumber), new PhoneNumber(fromNumber), body).create();
-        System.out.println("Message sent, sid is " + message.getSid());
+//        Twilio.init(sid, token);
+//        Message message = Message.creator(new PhoneNumber(toNumber), new PhoneNumber(fromNumber), body).create();
+//        System.out.println("Message sent, sid is " + message.getSid());
     }
 
     @Test
@@ -231,6 +231,6 @@ public class TwoStepVerificationManagerImplTest {
         List<String> recipientList = new ArrayList<String>();
         recipientList.add("w.zhou@global.leaseweb.com");
 
-        emailManager.sendEmail(recipientList, "send Email via email manager", "this is content<br><hr>second part<hr>third part<li>aa</li><li>bb</li>");
+//        emailManager.sendEmail(recipientList, "send Email via email manager", "this is content<br><hr>second part<hr>third part<li>aa</li><li>bb</li>");
     }
 }

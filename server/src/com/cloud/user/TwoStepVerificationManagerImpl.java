@@ -46,6 +46,7 @@ import com.sun.mail.smtp.SMTPSSLTransport;
 import com.sun.mail.smtp.SMTPTransport;
 
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -239,9 +240,6 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
     }
 
     public boolean sendSMS(String sid, String token, String fromNumber, String toNumber, String body) {
-        //TODO: remove it
-        if (1==1)
-            return true;
         Twilio.init(sid, token);
         Message message = Message.creator(new PhoneNumber(toNumber), new PhoneNumber(fromNumber), body).create();
         if (! StringUtils.isEmpty(message.getSid())){
@@ -325,8 +323,21 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
         if (StringUtils.isEmpty(toNumber)) {
             return 0;
         }
+        String body = "Verification code of Leaseweb Private Cloud : " + code;
         boolean result = sendSMS(TwoStepVerificationTwilioSid.value(), TwoStepVerificationTwilioToken.value(),
-                TwoStepVerificationTwilioFromPhoneNumber.value(), toNumber, String.valueOf(code));
+                TwoStepVerificationTwilioFromPhoneNumber.value(), toNumber, body);
+
+        // TODO: get email address from user details
+        List<String> recipientList = new ArrayList<String>();
+        recipientList.add("w.zhou@global.leaseweb.com");
+        String subject = "Verification code of Leaseweb Private Cloud";
+        try {
+            emailManager.sendEmail(recipientList, subject, body);
+        } catch (UnsupportedEncodingException e1) {
+            s_logger.debug("Failed to sent email to " + recipientList);
+        } catch (MessagingException e2) {
+            s_logger.debug("Failed to sent email to " + recipientList);
+        }
         if (result) {
             return code;
         } else {

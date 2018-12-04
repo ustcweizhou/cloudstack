@@ -344,6 +344,8 @@
                         var errorMsg = parseXMLHttpResponse(XMLHttpRequest);
                         if (errorMsg.length == 0 && XMLHttpRequest.status == 0)
                             errorMsg = dictionary['error.unable.to.reach.management.server'];
+                        else if (args.data.verificationcode != null && args.data.verificationcode.length > 0)
+                            errorMsg = "invalid verfication code";
                         else
                             errorMsg = _l('error.invalid.username.password'); //override error message
                         args.response.error(errorMsg);
