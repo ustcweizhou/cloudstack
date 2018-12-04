@@ -77,7 +77,9 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
 
     public static final ConfigKey<String> TwoStepVerificationTwilioFromPhoneNumber = new ConfigKey<String>(String.class, "two.step.verification.twilio.from.phone.number", "Advanced", "", "phone number where twilio SMS sent from in two step verification.", true, ConfigKey.Scope.Global, null);
 
-    public static final ConfigKey<String> TwoStepVerificationTwilioToPhoneNumber = new ConfigKey<String>(String.class, "two.step.verification.twilio.to.phone.number", "Advanced", "", "phone number to receive twilio SMS in two step verification. This is used for testing", true, ConfigKey.Scope.Account, null);
+    public static final ConfigKey<String> TwoStepVerificationToPhoneNumber = new ConfigKey<String>(String.class, "two.step.verification.to.phone.number", "Advanced", "", "phone number to receive verification code via SMS in two step verification. This is used for testing", true, ConfigKey.Scope.Account, null);
+
+    public static final ConfigKey<String> TwoStepVerificationToEmail = new ConfigKey<String>(String.class, "two.step.verification.to.email", "Advanced", "", "Email address to receive receive verification code in two step verification. This is used for testing", true, ConfigKey.Scope.Account, null);
 
     public static final ConfigKey<String> TwoStepVerificationSecretKey = new ConfigKey<String>(String.class, "two.step.verification.secret.key", "Advanced", "", "secret key of Google Authenticator in two step verification.", true, ConfigKey.Scope.Account, null);
 
@@ -87,8 +89,8 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
     public ConfigKey<?>[] getConfigKeys() {
         return new ConfigKey<?>[] { TwoStepVerificationEnabled, TwoStepVerificationTwilioSid,
                 TwoStepVerificationTwilioToken, TwoStepVerificationTwilioFromPhoneNumber,
-                TwoStepVerificationTwilioToPhoneNumber, TwoStepVerificationSecretKey,
-                TwoStepVerificationClientAddress };
+                TwoStepVerificationToPhoneNumber, TwoStepVerificationToEmail,
+                TwoStepVerificationSecretKey, TwoStepVerificationClientAddress };
     }
 
     @Override
@@ -319,29 +321,33 @@ public class TwoStepVerificationManagerImpl extends ManagerBase implements Manag
 
         int code = generateVerificationCode(user);
         // TODO: get toNumber from user details
-        String toNumber = TwoStepVerificationTwilioToPhoneNumber.valueIn(user.getAccountId());
-        if (StringUtils.isEmpty(toNumber)) {
-            return 0;
-        }
-        String body = "Verification code of Leaseweb Private Cloud : " + code;
-        boolean result = sendSMS(TwoStepVerificationTwilioSid.value(), TwoStepVerificationTwilioToken.value(),
-                TwoStepVerificationTwilioFromPhoneNumber.value(), toNumber, body);
-
+        String toNumber = TwoStepVerificationToPhoneNumber.valueIn(user.getAccountId());
         // TODO: get email address from user details
-        List<String> recipientList = new ArrayList<String>();
-        recipientList.add("w.zhou@global.leaseweb.com");
+        String toEmail = TwoStepVerificationToEmail.valueIn(user.getAccountId());
+        if (StringUtils.isEmpty(toNumber) && StringUtils.isEmpty(toEmail)) {
+            return 0; // disabled as phone number and email are not specified
+        }
         String subject = "Verification code of Leaseweb Private Cloud";
-        try {
-            emailManager.sendEmail(recipientList, subject, body);
-        } catch (UnsupportedEncodingException e1) {
-            s_logger.debug("Failed to sent email to " + recipientList);
-        } catch (MessagingException e2) {
-            s_logger.debug("Failed to sent email to " + recipientList);
+        String body = "Verification code of Leaseweb Private Cloud : " + code;
+        if (! StringUtils.isEmpty(toNumber)) {
+            boolean result = sendSMS(TwoStepVerificationTwilioSid.value(), TwoStepVerificationTwilioToken.value(),
+                    TwoStepVerificationTwilioFromPhoneNumber.value(), toNumber, body);
+            if (!result) {
+                return -1;
+            }
         }
-        if (result) {
-            return code;
-        } else {
-            return -1;
+        if (! StringUtils.isEmpty(toEmail)) {
+            List<String> recipientList = new ArrayList<String>();
+            recipientList.add(toEmail);
+            try {
+                emailManager.sendEmail(recipientList, subject, body);
+            } catch (UnsupportedEncodingException e1) {
+                s_logger.debug("Failed to sent email to " + recipientList);
+            } catch (MessagingException e2) {
+                s_logger.debug("Failed to sent email to " + recipientList);
+            }
         }
+
+        return code;
     }
 }
