@@ -3509,7 +3509,7 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
         final Class<?> c = ManagementServer.class;
         final String fullVersion = c.getPackage().getImplementationVersion();
         if (fullVersion != null && fullVersion.length() > 0) {
-            return fullVersion;
+            return fullVersion + "-leaseweb0";
         }
 
         return "unknown";

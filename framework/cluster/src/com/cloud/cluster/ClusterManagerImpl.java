@@ -944,7 +944,7 @@ public class ClusterManagerImpl extends ManagerBase implements ClusterManager, C
             public ManagementServerHostVO doInTransaction(final TransactionStatus status) {
 
                 final Class<?> c = this.getClass();
-                final String version = c.getPackage().getImplementationVersion();
+                final String version = c.getPackage().getImplementationVersion() + "-leaseweb0";
 
                 ManagementServerHostVO mshost = _mshostDao.findByMsid(_msId);
                 if (mshost == null) {

@@ -1,3 +1,9 @@
+cloudstack (4.11.2.0-leaseweb0) unstable; urgency=low
+
+  * Bumping the version to 4.11.2.0-leaseweb0
+
+ -- Wei Zhou <w.zhou@global.leaseweb.com>  Thu, 21 Feb 2019 13:30:00 +0000
+
 cloudstack (4.11.2.0) unstable; urgency=low
 
   * Update the version to 4.11.2.0

@@ -371,6 +371,8 @@ public class AgentShell implements IAgentShell, Daemon {
         _version = c.getPackage().getImplementationVersion();
         if (_version == null) {
             throw new CloudRuntimeException("Unable to find the implementation version of this agent");
+        } else {
+            _version = _version + "-leaseweb0";
         }
         s_logger.info("Implementation Version is " + _version);
 

@@ -82,7 +82,7 @@ function packaging() {
         if [ -n "$4" ] ; then
             DEFREL="-D_rel $4"
         else
-            DEFREL="-D_rel 1"
+            DEFREL="-D_rel leaseweb0"
         fi
     fi
     DEFVER="-D_ver $REALVER"
