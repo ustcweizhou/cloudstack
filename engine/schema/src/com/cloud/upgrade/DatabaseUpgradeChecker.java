@@ -78,6 +78,7 @@ import com.cloud.upgrade.dao.VersionVO;
 import com.cloud.upgrade.dao.VersionVO.Step;
 import com.cloud.utils.component.SystemIntegrityChecker;
 import com.cloud.utils.db.GlobalLock;
+import com.cloud.utils.db.DbProperties;
 import com.cloud.utils.db.ScriptRunner;
 import com.cloud.utils.db.TransactionLegacy;
 import com.cloud.utils.exception.CloudRuntimeException;
@@ -85,6 +86,9 @@ import com.google.common.collect.ImmutableList;
 import org.apache.cloudstack.utils.CloudStackVersion;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.FlywayException;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -97,6 +101,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Lists.newArrayList;
@@ -656,16 +661,40 @@ public class DatabaseUpgradeChecker implements SystemIntegrityChecker {
 
                 if (dbVersion.compareTo(currentVersion) == 0) {
                     s_logger.info("DB version and code version matches so no upgrade needed.");
-                    return;
+                } else {
+                    upgrade(dbVersion, currentVersion);
                 }
-
-                upgrade(dbVersion, currentVersion);
             } finally {
                 lock.unlock();
             }
         } finally {
             lock.releaseRef();
         }
+
+        s_logger.info("Running Flyway migration on Cloudstack database");
+        Properties dbProps = DbProperties.getDbProperties();
+        final String cloudUsername = dbProps.getProperty("db.cloud.username");
+        final String cloudPassword = dbProps.getProperty("db.cloud.password");
+        final String cloudHost = dbProps.getProperty("db.cloud.host");
+        final int cloudPort = Integer.parseInt(dbProps.getProperty("db.cloud.port"));
+        final String driver = dbProps.getProperty("db.cloud.driver", "jdbc:mysql");
+        final String dbUrl = driver + "://" + cloudHost + ":" + cloudPort + "/cloud";
+
+        try {
+            Flyway flyway = new Flyway()
+                    .configure()
+                    .dataSource(dbUrl, cloudUsername, cloudPassword)
+                    .table("cloudstack_schema_version")
+                    .baselineOnMigrate(true)
+                    .baselineVersion(_dao.getCurrentVersion())
+                    .placeholderReplacement(false)
+                    .locations("META-INF/db/csmigration","com/cloud/upgrade/flyway")
+                    .load();
+            flyway.migrate();
+        } catch (FlywayException fwe) {
+            throw new CloudRuntimeException("Failed to run Flyway migration on Cloudstack database due to " + fwe);
+        }
+
     }
 
     private static final class NoopDbUpgrade implements DbUpgrade {

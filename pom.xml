@@ -123,6 +123,7 @@
     <cs.wiremock.version>2.11.0</cs.wiremock.version>
     <cs.jetty.version>9.4.8.v20171121</cs.jetty.version>
     <cs.jetty-maven-plugin.version>9.2.22.v20170606</cs.jetty-maven-plugin.version>
+    <cs.flyway.version>5.2.4</cs.flyway.version>
   </properties>
 
   <distributionManagement>
@@ -651,7 +652,7 @@
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
             <sourceDirectory>${project.basedir}</sourceDirectory>
             <includes>**\/*.java</includes>
-            <excludes>**\/deps\/,**\/test\/,**\/target\/,**\/bin\/,**\/*.xml,**\/*.ini,**\/*.sh,**\/*.bat,**\/apidoc\/</excludes>
+            <excludes>**\/deps\/,**\/flyway\/,**\/test\/,**\/target\/,**\/bin\/,**\/*.xml,**\/*.ini,**\/*.sh,**\/*.bat,**\/apidoc\/</excludes>
           </configuration>
         </plugin>
         <plugin>
