@@ -695,6 +695,24 @@ public class DatabaseUpgradeChecker implements SystemIntegrityChecker {
             throw new CloudRuntimeException("Failed to run Flyway migration on Cloudstack database due to " + fwe);
         }
 
+        updateMinorVersion();
+    }
+
+    private void updateMinorVersion() {
+        final String dbMinorVersion = _dao.getCurrentMinorVersion();
+        final String currentVersionValue = this.getClass().getPackage().getImplementationVersion();
+        final String currentMinorVersion = this.getClass().getPackage().getImplementationVersion() + "-leaseweb0";;
+        s_logger.info("DB minor version = " + dbMinorVersion + " Code minor Version = " + currentMinorVersion);
+        if (StringUtils.equals(dbMinorVersion, currentMinorVersion)) {
+            s_logger.info("DB minor version and code minor version matches so no upgrade needed.");
+            return;
+        }
+        VersionVO version = new VersionVO(currentVersionValue);
+        version.setMinorVersion(currentMinorVersion);
+        version.setUpdated(new Date());
+        version.setStep(Step.Complete);
+        _dao.persist(version);
+        s_logger.debug("Upgrade completed for minor version " + currentMinorVersion);
     }
 
     private static final class NoopDbUpgrade implements DbUpgrade {

@@ -46,6 +46,9 @@ public class VersionVO implements InternalIdentity {
     @Column(name = "version")
     String version;
 
+    @Column(name = "minor_version")
+    String minorVersion;
+
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated")
     Date updated;
@@ -70,6 +73,14 @@ public class VersionVO implements InternalIdentity {
 
     public String getVersion() {
         return version;
+    }
+
+    public String getMinorVersion() {
+        return minorVersion;
+    }
+
+    public void setMinorVersion(String minorVersion) {
+        this.minorVersion = minorVersion;
     }
 
     public Date getUpdated() {

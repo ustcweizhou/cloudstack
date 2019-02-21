@@ -43,6 +43,7 @@ public class VersionDaoImpl extends GenericDaoBase<VersionVO, Long> implements V
     private static final Logger s_logger = Logger.getLogger(VersionDaoImpl.class);
 
     final GenericSearchBuilder<VersionVO, String> CurrentVersionSearch;
+    final GenericSearchBuilder<VersionVO, String> CurrentMinorVersionSearch;
     final SearchBuilder<VersionVO> AllFieldsSearch;
 
     public VersionDaoImpl() {
@@ -52,6 +53,11 @@ public class VersionDaoImpl extends GenericDaoBase<VersionVO, Long> implements V
         CurrentVersionSearch.selectFields(CurrentVersionSearch.entity().getVersion());
         CurrentVersionSearch.and("step", CurrentVersionSearch.entity().getStep(), Op.EQ);
         CurrentVersionSearch.done();
+
+        CurrentMinorVersionSearch = createSearchBuilder(String.class);
+        CurrentMinorVersionSearch.selectFields(CurrentMinorVersionSearch.entity().getMinorVersion());
+        CurrentMinorVersionSearch.and("step", CurrentMinorVersionSearch.entity().getStep(), Op.EQ);
+        CurrentMinorVersionSearch.done();
 
         AllFieldsSearch = createSearchBuilder();
         AllFieldsSearch.and("version", AllFieldsSearch.entity().getVersion(), Op.EQ);
@@ -151,5 +157,27 @@ public class VersionDaoImpl extends GenericDaoBase<VersionVO, Long> implements V
             throw new CloudRuntimeException("Unable to get the current version", e);
         }
 
+    }
+
+    @Override
+    @DB
+    public String getCurrentMinorVersion() {
+        try (Connection conn = TransactionLegacy.getStandaloneConnection();) {
+
+            SearchCriteria<String> sc = CurrentMinorVersionSearch.create();
+
+            sc.setParameters("step", Step.Complete);
+            Filter filter = new Filter(VersionVO.class, "id", false, 0l, 1l);
+            final List<String> upgradedVersions = customSearch(sc, filter);
+
+            if (upgradedVersions.isEmpty()) {
+                return null;
+            } else {
+                return upgradedVersions.get(0);
+            }
+        } catch (final Exception e) {
+            s_logger.error("Unable to get the current minor version");
+            return null;
+        }
     }
 }

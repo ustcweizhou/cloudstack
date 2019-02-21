@@ -23,4 +23,6 @@ public interface VersionDao extends GenericDao<VersionVO, Long> {
     VersionVO findByVersion(String version, Step step);
 
     String getCurrentVersion();
+
+    String getCurrentMinorVersion();
 }
