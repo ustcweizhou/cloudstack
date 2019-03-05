@@ -371,6 +371,10 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
     public static final ConfigKey<Boolean> SystemVMUseLocalStorage = new ConfigKey<Boolean>(Boolean.class, "system.vm.use.local.storage", "Advanced", "false",
             "Indicates whether to use local storage pools or shared storage pools for system VMs.", false, ConfigKey.Scope.Zone, null);
+    public static final ConfigKey<Boolean> DeleteDedicatedIpRangesInDomainAccountRemoval = new ConfigKey<Boolean>(Boolean.class, "delete.dedicated.ip.ranges.in.domain.account.removal", "Advanced", "true",
+            "Indicates whether to remove the dedicated virtual ip ranges in DeleteAccount or DeleteDomain. Default value is false, they will be released instead of removed", true, ConfigKey.Scope.Global, null);
+    public static final ConfigKey<Boolean> ResourceCountAllDedicatedIpsForAccount = new ConfigKey<Boolean>(Boolean.class, "resource.count.all.dedicated.ips", "Advanced", "true",
+            "Indicates whether to take all ips in dedicated virtual ip ranges into calculation in resource count and limitation for an account", true, ConfigKey.Scope.Global, null);
 
     private static final String DefaultForSystemVmsForPodIpRange = "0";
     private static final String DefaultVlanForPodIpRange = Vlan.UNTAGGED.toString();
@@ -3114,7 +3118,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             throw new InvalidParameterValueException("Gateway, netmask and zoneId have to be passed in for virtual and direct untagged networks");
         }
 
-        if (forVirtualNetwork) {
+        if (forVirtualNetwork && ResourceCountAllDedicatedIpsForAccount.value()) {
             if (vlanOwner != null) {
 
                 final long accountIpRange = NetUtils.ip2Long(endIP) - NetUtils.ip2Long(startIP) + 1;
@@ -3567,8 +3571,10 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                         UsageEventUtils.publishUsageEvent(EventTypes.EVENT_NET_IP_ASSIGN, vlanOwner.getId(), ip.getDataCenterId(), ip.getId(), ip.getAddress().toString(),
                                 ip.isSourceNat(), vlan.getVlanType().toString(), ip.getSystem(), ip.getClass().getName(), ip.getUuid());
                     }
-                    // increment resource count for dedicated public ip's
-                    _resourceLimitMgr.incrementResourceCount(vlanOwner.getId(), ResourceType.public_ip, new Long(ips.size()));
+                    if (ResourceCountAllDedicatedIpsForAccount.value()) {
+                        // increment resource count for dedicated public ip's
+                        _resourceLimitMgr.incrementResourceCount(vlanOwner.getId(), ResourceType.public_ip, new Long(ips.size()));
+                    }
                 } else if (domain != null && !forSystemVms) {
                     // This VLAN is domain-wide, so create a DomainVlanMapVO entry
                     final DomainVlanMapVO domainVlanMapVO = new DomainVlanMapVO(domain.getId(), vlan.getId());
@@ -3601,16 +3607,15 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         }
 
         boolean isDomainSpecific = false;
-        List<DomainVlanMapVO> domainVln = _domainVlanMapDao.listDomainVlanMapsByVlan(vlanRange.getId());
+        List<DomainVlanMapVO> domainVlan = _domainVlanMapDao.listDomainVlanMapsByVlan(vlanRange.getId());
         // Check for domain wide pool. It will have an entry for domain_vlan_map.
-        if (domainVln != null && !domainVln.isEmpty()) {
+        if (domainVlan != null && !domainVlan.isEmpty()) {
             isDomainSpecific = true;
         }
 
         // Check if the VLAN has any allocated public IPs
         final List<IPAddressVO> ips = _publicIpAddressDao.listByVlanId(vlanDbId);
-        if (isAccountSpecific) {
-            int resourceCountToBeDecrement = 0;
+        if (isAccountSpecific || isDomainSpecific) {
             try {
                 vlanRange = _vlanDao.acquireInLockTable(vlanDbId, 30);
                 if (vlanRange == null) {
@@ -3621,7 +3626,6 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                     s_logger.debug("lock vlan " + vlanDbId + " is acquired");
                 }
                 for (final IPAddressVO ip : ips) {
-                    boolean success = true;
                     if (ip.isOneToOneNat()) {
                         throw new InvalidParameterValueException("Can't delete account specific vlan " + vlanDbId + " as ip " + ip
                                 + " belonging to the range is used for static nat purposes. Cleanup the rules first");
@@ -3639,21 +3643,20 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                     }
                     if (ip.getAllocatedTime() != null) {// This means IP is allocated
                         // release public ip address here
-                        success = _ipAddrMgr.disassociatePublicIpAddress(ip.getId(), userId, caller);
-                    }
-                    if (!success) {
-                        s_logger.warn("Some ip addresses failed to be released as a part of vlan " + vlanDbId + " removal");
-                    } else {
-                        resourceCountToBeDecrement++;
-                        UsageEventUtils.publishUsageEvent(EventTypes.EVENT_NET_IP_RELEASE, acctVln.get(0).getAccountId(), ip.getDataCenterId(), ip.getId(),
-                                ip.getAddress().toString(), ip.isSourceNat(), vlanRange.getVlanType().toString(), ip.getSystem(), ip.getClass().getName(), ip.getUuid());
+                        Long accountId = ip.getAccountId();
+                        boolean result = _ipAddrMgr.disassociatePublicIpAddress(ip.getId(), userId, caller);
+                        if (result) {
+                            UsageEventUtils.publishUsageEvent(EventTypes.EVENT_NET_IP_RELEASE, accountId,
+                                    ip.getDataCenterId(), ip.getId(), ip.getAddress().toString(),
+                                    ip.isSourceNat(), vlanRange.getVlanType().toString(), ip.getSystem(),
+                                    ip.getClass().getName(), ip.getUuid());
+                        } else {
+                           throw new InvalidParameterValueException("Failed to release ip " + ip + " as a part of vlan " + vlanDbId + " removal");
+                        }
                     }
                 }
             } finally {
                 _vlanDao.releaseFromLockTable(vlanDbId);
-                if (resourceCountToBeDecrement > 0) {  //Making sure to decrement the count of only success operations above. For any reaason if disassociation fails then this number will vary from original range length.
-                    _resourceLimitMgr.decrementResourceCount(acctVln.get(0).getAccountId(), ResourceType.public_ip, new Long(resourceCountToBeDecrement));
-                }
             }
         } else {   // !isAccountSpecific
             final NicIpAliasVO ipAlias = _nicIpAliasDao.findByGatewayAndNetworkIdAndState(vlanRange.getVlanGateway(), vlanRange.getNetworkId(), NicIpAlias.State.active);
@@ -3668,10 +3671,25 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             }
         }
 
+        if (isAccountSpecific) {
+            if (ResourceCountAllDedicatedIpsForAccount.value()) {
+                _resourceLimitMgr.decrementResourceCount(acctVln.get(0).getAccountId(), ResourceType.public_ip, new Long(ips.size()));
+            }
+            _accountVlanMapDao.remove(acctVln.get(0).getId());
+            s_logger.debug("Removed the vlan from account_vlan_map successfully.");
+        } else if (isDomainSpecific && _domainVlanMapDao.remove(domainVlan.get(0).getId())) {
+            s_logger.debug("Removed the vlan from domain_vlan_map successfully.");
+        }
+
         Transaction.execute(new TransactionCallbackNoReturn() {
             @Override
             public void doInTransactionWithoutResult(final TransactionStatus status) {
                 _publicIpAddressDao.deletePublicIPRange(vlanDbId);
+                final PodVlanMapVO podVlanMapVO = _podVlanMapDao.listPodVlanMapsByVlan(vlanDbId);
+                if (podVlanMapVO != null) {
+                    // The VLAN is pod-wide in Basic zone
+                    _podVlanMapDao.remove(podVlanMapVO.getId());
+                }
                 _vlanDao.remove(vlanDbId);
             }
         });
@@ -3747,7 +3765,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         }
 
         // Check Public IP resource limits
-        if (vlanOwner != null) {
+        if (vlanOwner != null && ResourceCountAllDedicatedIpsForAccount.value()) {
             final int accountPublicIpRange = _publicIpAddressDao.countIPs(zoneId, vlanDbId, false);
             _resourceLimitMgr.checkResourceLimit(vlanOwner, ResourceType.public_ip, accountPublicIpRange);
         }
@@ -3756,14 +3774,17 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         // account
         boolean forSystemVms = false;
         final List<IPAddressVO> ips = _publicIpAddressDao.listByVlanId(vlanDbId);
+        final List<IPAddressVO> ipsInUse = new ArrayList<IPAddressVO>();
         for (final IPAddressVO ip : ips) {
             forSystemVms = ip.isForSystemVms();
             final Long allocatedToAccountId = ip.getAllocatedToAccountId();
             if (allocatedToAccountId != null) {
-                final Account accountAllocatedTo = _accountMgr.getActiveAccountById(allocatedToAccountId);
-                if (!accountAllocatedTo.getAccountName().equalsIgnoreCase(accountName)) {
+                if (vlanOwner != null && allocatedToAccountId != vlanOwner.getId()) {
                     throw new InvalidParameterValueException(ip.getAddress() + " Public IP address in range is allocated to another account ");
+                } else if (vlanOwner != null) {
+                    ipsInUse.add(ip);
                 }
+                final Account accountAllocatedTo = _accountMgr.getActiveAccountById(allocatedToAccountId);
                 if (vlanOwner == null && domain != null && domain.getId() != accountAllocatedTo.getDomainId()){
                     throw new InvalidParameterValueException(ip.getAddress()
                             + " Public IP address in range is allocated to another domain/account ");
@@ -3788,8 +3809,8 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         }
 
         // increment resource count for dedicated public ip's
-        if (vlanOwner != null) {
-            _resourceLimitMgr.incrementResourceCount(vlanOwner.getId(), ResourceType.public_ip, new Long(ips.size()));
+        if (vlanOwner != null && ResourceCountAllDedicatedIpsForAccount.value()) {
+            _resourceLimitMgr.incrementResourceCount(vlanOwner.getId(), ResourceType.public_ip, new Long(ips.size() - ipsInUse.size()));
         }
 
         return vlan;
@@ -3824,9 +3845,9 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         }
 
         boolean isDomainSpecific = false;
-        final List<DomainVlanMapVO> domainVln = _domainVlanMapDao.listDomainVlanMapsByVlan(vlanDbId);
+        final List<DomainVlanMapVO> domainVlan = _domainVlanMapDao.listDomainVlanMapsByVlan(vlanDbId);
         // Check for domain wide pool. It will have an entry for domain_vlan_map.
-        if (domainVln != null && !domainVln.isEmpty()) {
+        if (domainVlan != null && !domainVlan.isEmpty()) {
             isDomainSpecific = true;
         }
 
@@ -3851,12 +3872,26 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                 for (final IPAddressVO ip : ips) {
                     // Disassociate allocated IP's that are not in use
                     if (!ip.isOneToOneNat() && !ip.isSourceNat() && !(_firewallDao.countRulesByIpId(ip.getId()) > 0)) {
+                        if (ip.getAllocatedTime() == null) {
+                            continue;
+                        }
                         if (s_logger.isDebugEnabled()) {
                             s_logger.debug("Releasing Public IP addresses" + ip + " of vlan " + vlanDbId + " as part of Public IP" + " range release to the system pool");
                         }
-                        success = success && _ipAddrMgr.disassociatePublicIpAddress(ip.getId(), userId, caller);
+                        Long accountId = ip.getAccountId();
+                        boolean result = _ipAddrMgr.disassociatePublicIpAddress(ip.getId(), userId, caller);
+                        if (result) {
+                            UsageEventUtils.publishUsageEvent(EventTypes.EVENT_NET_IP_RELEASE, accountId,
+                                    ip.getDataCenterId(), ip.getId(), ip.getAddress().toString(),
+                                    ip.isSourceNat(), vlan.getVlanType().toString(), ip.getSystem(),
+                                    ip.getClass().getName(), ip.getUuid());
+                        } else {
+                            success = false;
+                            s_logger.warn("Failed to release ip " + ip + " as a part of vlan " + vlanDbId + " release");
+                        }
                     } else {
                         ipsInUse.add(ip);
+                        s_logger.warn("Ip " + ip + " is still in use, do nothing as a part of vlan " + vlanDbId + " release");
                     }
                 }
                 if (!success) {
@@ -3868,19 +3903,15 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         }
 
         // A Public IP range can only be dedicated to one account at a time
-        if (isAccountSpecific && _accountVlanMapDao.remove(acctVln.get(0).getId())) {
-            // generate usage events to remove dedication for every ip in the range that has been disassociated
-            for (final IPAddressVO ip : ips) {
-                if (!ipsInUse.contains(ip)) {
-                    UsageEventUtils.publishUsageEvent(EventTypes.EVENT_NET_IP_RELEASE, acctVln.get(0).getAccountId(), ip.getDataCenterId(), ip.getId(), ip.getAddress().toString(),
-                            ip.isSourceNat(), vlan.getVlanType().toString(), ip.getSystem(), ip.getClass().getName(), ip.getUuid());
-                }
+        if (isAccountSpecific) {
+            if (ResourceCountAllDedicatedIpsForAccount.value()) {
+                _resourceLimitMgr.decrementResourceCount(acctVln.get(0).getAccountId(), ResourceType.public_ip, new Long(ips.size() - ipsInUse.size()));
             }
-            // decrement resource count for dedicated public ip's
-            _resourceLimitMgr.decrementResourceCount(acctVln.get(0).getAccountId(), ResourceType.public_ip, new Long(ips.size()));
+            _accountVlanMapDao.remove(acctVln.get(0).getId());
+            s_logger.debug("Removed the vlan from account_vlan_map successfully.");
             return true;
-        } else if (isDomainSpecific && _domainVlanMapDao.remove(domainVln.get(0).getId())) {
-            s_logger.debug("Remove the vlan from domain_vlan_map successfully.");
+        } else if (isDomainSpecific && _domainVlanMapDao.remove(domainVlan.get(0).getId())) {
+            s_logger.debug("Removed the vlan from domain_vlan_map successfully.");
             return true;
         } else {
             return false;
@@ -5389,7 +5420,9 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                     @Override
                     public void doInTransactionWithoutResult(final TransactionStatus status) {
                         for (DomainVlanMapVO map : maps) {
-                            if (!releasePublicIpRange(map.getVlanDbId(), _accountMgr.getSystemUser().getId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM))) {
+                            if (DeleteDedicatedIpRangesInDomainAccountRemoval.value()) {
+                                deleteVlanAndPublicIpRange(_accountMgr.getSystemUser().getId(), map.getVlanDbId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM));
+                            } else if (!releasePublicIpRange(map.getVlanDbId(), _accountMgr.getSystemUser().getId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM))) {
                                 throw new CloudRuntimeException("Failed to release domain specific virtual ip ranges for domain id=" + domainId);
                             }
                         }
@@ -5415,7 +5448,9 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                     @Override
                     public void doInTransactionWithoutResult(final TransactionStatus status) {
                         for (final AccountVlanMapVO map : maps) {
-                            if (!releasePublicIpRange(map.getVlanDbId(), _accountMgr.getSystemUser().getId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM))) {
+                            if (DeleteDedicatedIpRangesInDomainAccountRemoval.value()) {
+                                deleteVlanAndPublicIpRange(_accountMgr.getSystemUser().getId(), map.getVlanDbId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM));
+                            } else if (!releasePublicIpRange(map.getVlanDbId(), _accountMgr.getSystemUser().getId(), _accountMgr.getAccount(Account.ACCOUNT_ID_SYSTEM))) {
                                 throw new CloudRuntimeException("Failed to release account specific virtual ip ranges for account id=" + accountId);
                             }
                         }
@@ -5688,6 +5723,6 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
     @Override
     public ConfigKey<?>[] getConfigKeys() {
-        return new ConfigKey<?>[] {SystemVMUseLocalStorage};
+        return new ConfigKey<?>[] {SystemVMUseLocalStorage, DeleteDedicatedIpRangesInDomainAccountRemoval, ResourceCountAllDedicatedIpsForAccount };
     }
 }

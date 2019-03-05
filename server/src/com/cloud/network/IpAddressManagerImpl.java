@@ -49,6 +49,7 @@ import com.cloud.agent.AgentManager;
 import com.cloud.alert.AlertManager;
 import com.cloud.api.ApiDBUtils;
 import com.cloud.configuration.ConfigurationManager;
+import com.cloud.configuration.ConfigurationManagerImpl;
 import com.cloud.configuration.Resource.ResourceType;
 import com.cloud.dc.AccountVlanMapVO;
 import com.cloud.dc.DataCenter;
@@ -1802,7 +1803,8 @@ public class IpAddressManagerImpl extends ManagerBase implements IpAddressManage
 
     protected boolean updateIpResourceCount(IPAddressVO ip) {
         // don't increment resource count for direct and dedicated ip addresses
-        return (ip.getAssociatedWithNetworkId() != null || ip.getVpcId() != null) && !isIpDedicated(ip);
+        return (ip.getAssociatedWithNetworkId() != null || ip.getVpcId() != null)
+                && ! (isIpDedicated(ip) && ConfigurationManagerImpl.ResourceCountAllDedicatedIpsForAccount.value());
     }
 
     @Override

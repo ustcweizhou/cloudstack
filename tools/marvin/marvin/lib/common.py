@@ -63,6 +63,9 @@ from marvin.sshClient import SshClient
 from marvin.codes import (PASS, FAILED, ISOLATED_NETWORK, VPC_NETWORK,
                           BASIC_ZONE, FAIL, NAT_RULE, STATIC_NAT_RULE,
                           RESOURCE_PRIMARY_STORAGE, RESOURCE_SECONDARY_STORAGE,
+                          RESOURCE_USER_VM, RESOURCE_PUBLIC_IP, RESOURCE_VOLUME,
+                          RESOURCE_SNAPSHOT, RESOURCE_TEMPLATE, RESOURCE_PROJECT,
+                          RESOURCE_NETWORK, RESOURCE_VPC,
                           RESOURCE_CPU, RESOURCE_MEMORY, PUBLIC_TRAFFIC,
                           GUEST_TRAFFIC, MANAGEMENT_TRAFFIC, STORAGE_TRAFFIC,
                           VMWAREDVS)
@@ -1392,6 +1395,20 @@ def matchResourceCount(apiclient, expectedCount, resourceType,
             resourceCount = resourceholderlist[0].cputotal
         elif resourceType == RESOURCE_MEMORY:
             resourceCount = resourceholderlist[0].memorytotal
+        elif resourceType == RESOURCE_USER_VM:
+            resourceCount = resourceholderlist[0].vmtotal
+        elif resourceType == RESOURCE_PUBLIC_IP:
+            resourceCount = resourceholderlist[0].iptotal
+        elif resourceType == RESOURCE_VOLUME:
+            resourceCount = resourceholderlist[0].volumetotal
+        elif resourceType == RESOURCE_SNAPSHOT:
+            resourceCount = resourceholderlist[0].snapshottotal
+        elif resourceType == RESOURCE_TEMPLATE:
+            resourceCount = resourceholderlist[0].templatetotal
+        elif resourceType == RESOURCE_NETWORK:
+            resourceCount = resourceholderlist[0].networktotal
+        elif resourceType == RESOURCE_VPC:
+            resourceCount = resourceholderlist[0].vpctotal
         assert str(resourceCount) == str(expectedCount),\
                 "Resource count %s should match with the expected resource count %s" %\
                 (resourceCount, expectedCount)

@@ -45,6 +45,7 @@ import org.springframework.stereotype.Component;
 
 import com.cloud.alert.AlertManager;
 import com.cloud.configuration.Config;
+import com.cloud.configuration.ConfigurationManagerImpl;
 import com.cloud.configuration.Resource;
 import com.cloud.configuration.Resource.ResourceOwnerType;
 import com.cloud.configuration.Resource.ResourceType;
@@ -981,18 +982,19 @@ public class ResourceLimitManagerImpl extends ManagerBase implements ResourceLim
     private long calculatePublicIpForAccount(long accountId) {
         Long dedicatedCount = 0L;
         Long allocatedCount = 0L;
+        int allocatedDedicatedCount = 0; // Allocated Ips in dedicated ip ranges
 
+        allocatedCount = _ipAddressDao.countAllocatedIPsForAccount(accountId);
+        if (! ConfigurationManagerImpl.ResourceCountAllDedicatedIpsForAccount.value()) {
+            return allocatedCount;
+        }
         List<VlanVO> dedicatedVlans = _vlanDao.listDedicatedVlans(accountId);
         for (VlanVO dedicatedVlan : dedicatedVlans) {
             List<IPAddressVO> ips = _ipAddressDao.listByVlanId(dedicatedVlan.getId());
             dedicatedCount += new Long(ips.size());
+            allocatedDedicatedCount += _ipAddressDao.countIPs(dedicatedVlan.getDataCenterId(), dedicatedVlan.getId(), true);
         }
-        allocatedCount = _ipAddressDao.countAllocatedIPsForAccount(accountId);
-        if (dedicatedCount > allocatedCount) {
-            return dedicatedCount;
-        } else {
-            return allocatedCount;
-        }
+        return allocatedCount + (dedicatedCount - new Long(allocatedDedicatedCount));
     }
 
     @Override
