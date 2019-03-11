@@ -1297,6 +1297,7 @@ div.panel div.list-view {
 
 .detail-view div.list-view {
   width: 930px;
+  max-width: 95%;
   border: 1px solid #DAD4D4;
   margin: 41px auto auto !important;
   height: 536px !important;
@@ -1308,7 +1309,8 @@ div.panel div.list-view div.data-table table {
 }
 
 .detail-view div.list-view div.data-table table {
-  width: 903px !important;
+  max-width: 903px;
+  width: auto !important;
 }
 
 .detail-view div.list-view div.data-table table td {
@@ -1328,7 +1330,8 @@ div.panel div.list-view div.fixed-header {
 }
 
 .detail-view div.list-view div.fixed-header {
-  width: 903px !important;
+  max-width: 903px;
+  width: auto !important;
   top: 49px !important;
   left: 29px !important;
   background: #FFFFFF;
