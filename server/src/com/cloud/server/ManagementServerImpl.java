@@ -553,6 +553,7 @@ import com.cloud.capacity.dao.CapacityDao;
 import com.cloud.capacity.dao.CapacityDaoImpl.SummedCapacity;
 import com.cloud.cluster.ClusterManager;
 import com.cloud.configuration.Config;
+import com.cloud.configuration.ConfigurationManagerImpl;
 import com.cloud.consoleproxy.ConsoleProxyManagementState;
 import com.cloud.consoleproxy.ConsoleProxyManager;
 import com.cloud.dc.AccountVlanMapVO;
@@ -1775,7 +1776,8 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
 
         if (scope != null && !scope.isEmpty()) {
             // getting the list of parameters at requested scope
-            if (scope.equals(ConfigKey.Scope.Domain.toString())) {
+            if (ConfigurationManagerImpl.EnableAccountSettingsForDomain.value()
+                    && scope.equals(ConfigKey.Scope.Domain.toString())) {
                 sc.addAnd("scope", SearchCriteria.Op.IN, ConfigKey.Scope.Domain.toString(), ConfigKey.Scope.Account.toString());
             } else {
                 sc.addAnd("scope", SearchCriteria.Op.EQ, scope);

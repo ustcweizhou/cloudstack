@@ -25,6 +25,7 @@ import javax.inject.Inject;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.ConfigKey.Scope;
 import org.apache.cloudstack.framework.config.ScopedConfigStorage;
+import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 
 import com.cloud.domain.DomainDetailVO;
 import com.cloud.domain.DomainVO;
@@ -42,6 +43,8 @@ import com.cloud.utils.db.TransactionLegacy;
 public class AccountDetailsDaoImpl extends GenericDaoBase<AccountDetailVO, Long> implements AccountDetailsDao, ScopedConfigStorage {
     protected final SearchBuilder<AccountDetailVO> accountSearch;
 
+    @Inject
+    private ConfigurationDao _configDao;
     @Inject
     protected AccountDao _accountDao;
     @Inject
@@ -116,6 +119,10 @@ public class AccountDetailsDaoImpl extends GenericDaoBase<AccountDetailVO, Long>
         AccountDetailVO vo = findDetail(id, key.key());
         String value = vo == null ? null : vo.getValue();
         if (value != null) {
+            return value;
+        }
+        String enableAccountSettingsForDomain = _configDao.getValue("enable.account.settings.for.domain");
+        if (enableAccountSettingsForDomain == null || ! Boolean.parseBoolean(enableAccountSettingsForDomain)) {
             return value;
         }
         AccountVO account = _accountDao.findById(id);

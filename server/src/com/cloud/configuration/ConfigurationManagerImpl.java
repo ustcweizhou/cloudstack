@@ -376,6 +376,8 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             "Indicates whether to remove the dedicated virtual ip ranges in DeleteAccount or DeleteDomain. Default value is false, they will be released instead of removed", true, ConfigKey.Scope.Global, null);
     public static final ConfigKey<Boolean> ResourceCountAllDedicatedIpsForAccount = new ConfigKey<Boolean>(Boolean.class, "resource.count.all.dedicated.ips", "Advanced", "true",
             "Indicates whether to take all ips in dedicated virtual ip ranges into calculation in resource count and limitation for an account", true, ConfigKey.Scope.Global, null);
+    public static final ConfigKey<Boolean> EnableAccountSettingsForDomain = new ConfigKey<Boolean>(Boolean.class, "enable.account.settings.for.domain", "Advanced", "false",
+            "Indicates whether to add account settings for domain. If true, account settings will be added to domain settings, all accounts in the domain will inherit the domain setting if account setting is not set.", true, ConfigKey.Scope.Global, null);
 
     private static final String DefaultForSystemVmsForPodIpRange = "0";
     private static final String DefaultVlanForPodIpRange = Vlan.UNTAGGED.toString();
@@ -768,7 +770,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
         final String configScope = cfg.getScope();
         if (scope != null) {
-            if (!configScope.contains(scope) && !(configScope.contains(Scope.Account.toString()) && scope.equals(Scope.Domain.toString()))) {
+            if (!configScope.contains(scope) && !(EnableAccountSettingsForDomain.value() && configScope.equals(Scope.Account.toString()) && scope.equals(Scope.Domain.toString()))) {
                 s_logger.error("Invalid scope id provided for the parameter " + name);
                 return "Invalid scope id provided for the parameter " + name;
             }
@@ -5724,6 +5726,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
     @Override
     public ConfigKey<?>[] getConfigKeys() {
-        return new ConfigKey<?>[] {SystemVMUseLocalStorage, DeleteDedicatedIpRangesInDomainAccountRemoval, ResourceCountAllDedicatedIpsForAccount };
+        return new ConfigKey<?>[] {SystemVMUseLocalStorage, DeleteDedicatedIpRangesInDomainAccountRemoval, ResourceCountAllDedicatedIpsForAccount,
+                EnableAccountSettingsForDomain };
     }
 }
