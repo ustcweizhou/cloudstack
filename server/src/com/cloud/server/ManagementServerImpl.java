@@ -1775,7 +1775,11 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
 
         if (scope != null && !scope.isEmpty()) {
             // getting the list of parameters at requested scope
-            sc.addAnd("scope", SearchCriteria.Op.EQ, scope);
+            if (scope.equals(ConfigKey.Scope.Domain.toString())) {
+                sc.addAnd("scope", SearchCriteria.Op.IN, ConfigKey.Scope.Domain.toString(), ConfigKey.Scope.Account.toString());
+            } else {
+                sc.addAnd("scope", SearchCriteria.Op.EQ, scope);
+            }
         }
 
         final Pair<List<ConfigurationVO>, Integer> result = _configDao.searchAndCount(sc, searchFilter);
@@ -1788,7 +1792,13 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
                 if (configVo != null) {
                     final ConfigKey<?> key = _configDepot.get(param.getName());
                     if (key != null) {
-                        configVo.setValue(key.valueIn(id) == null ? null : key.valueIn(id).toString());
+                        if (scope.equals(ConfigKey.Scope.Domain.toString())) {
+                            Object value = key.valueInDomain(id);
+                            configVo.setValue(value == null ? null : value.toString());
+                        } else {
+                            Object value = key.valueIn(id);
+                            configVo.setValue(value == null ? null : value.toString());
+                        }
                         configVOList.add(configVo);
                     } else {
                         s_logger.warn("ConfigDepot could not find parameter " + param.getName() + " for scope " + scope);

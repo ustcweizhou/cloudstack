@@ -73,6 +73,7 @@ import org.apache.cloudstack.engine.subsystem.api.storage.DataStoreManager;
 import org.apache.cloudstack.engine.subsystem.api.storage.ZoneScope;
 import org.apache.cloudstack.framework.config.ConfigDepot;
 import org.apache.cloudstack.framework.config.ConfigKey;
+import org.apache.cloudstack.framework.config.ConfigKey.Scope;
 import org.apache.cloudstack.framework.config.Configurable;
 import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.framework.config.impl.ConfigurationVO;
@@ -767,7 +768,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
         final String configScope = cfg.getScope();
         if (scope != null) {
-            if (!configScope.contains(scope)) {
+            if (!configScope.contains(scope) && !(configScope.contains(Scope.Account.toString()) && scope.equals(Scope.Domain.toString()))) {
                 s_logger.error("Invalid scope id provided for the parameter " + name);
                 return "Invalid scope id provided for the parameter " + name;
             }
