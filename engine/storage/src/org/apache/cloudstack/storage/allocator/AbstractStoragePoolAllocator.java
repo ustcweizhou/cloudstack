@@ -251,11 +251,11 @@ public abstract class AbstractStoragePoolAllocator extends AdapterBase implement
         return true;
     }
 
-    protected String[] getDomainStorageTags(DiskProfile dskCh) {
+    protected String[] getAccountDefaultStorageTags(DiskProfile dskCh) {
         String[] tags = dskCh.getTags();
         if (tags.length == 0) {
             final Volume volume = _volumeDao.findById(dskCh.getVolumeId());
-            String storagetags = StorageManager.DomainStorageTag.valueInDomain(volume.getDomainId());
+            String storagetags = StorageManager.AccountDefaultStorageTag.valueIn(volume.getAccountId());
             if (storagetags != null && !storagetags.isEmpty()) {
                 tags = storagetags.split(",");
                 s_logger.debug("Looking for pools having storage tags of domain: " + Arrays.toString(tags));

@@ -102,7 +102,7 @@ public class LocalStoragePoolAllocator extends AbstractStoragePoolAllocator {
                 // zone wide primary storage deployment
                 return null;
             }
-            String[] tags = getDomainStorageTags(dskCh);
+            String[] tags = getAccountDefaultStorageTags(dskCh);
             List<StoragePoolVO> availablePools =
                 _storagePoolDao.findLocalStoragePoolsByTags(plan.getDataCenterId(), plan.getPodId(), plan.getClusterId(), tags);
             for (StoragePoolVO pool : availablePools) {

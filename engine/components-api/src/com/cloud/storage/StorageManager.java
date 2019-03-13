@@ -93,8 +93,8 @@ public interface StorageManager extends StorageService {
             ConfigKey.Scope.Global,
             null);
 
-    public static final ConfigKey<String> DomainStorageTag = new ConfigKey<String>(String.class, "domain.storage.tag", "Advanced", "",
-        "The service/disk offerings without storage tag will use this storage tag in vm/volume allocation in the domain.", true, ConfigKey.Scope.Domain, null);
+    public static final ConfigKey<String> AccountDefaultStorageTag = new ConfigKey<String>(String.class, "account.default.storage.tag", "Advanced", "",
+        "The service/disk offerings without storage tag will use this storage tag in vm/volume allocation.", true, ConfigKey.Scope.Account, null);
 
     /**
      * Returns a comma separated list of tags for the specified storage pool

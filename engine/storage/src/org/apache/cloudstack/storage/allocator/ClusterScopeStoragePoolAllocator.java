@@ -83,7 +83,7 @@ public class ClusterScopeStoragePoolAllocator extends AbstractStoragePoolAllocat
             }
         }
 
-        String[] tags = getDomainStorageTags(dskCh);
+        String[] tags = getAccountDefaultStorageTags(dskCh);
         List<StoragePoolVO> pools = _storagePoolDao.findPoolsByTags(dcId, podId, clusterId, tags);
         s_logger.debug("Found pools matching tags: " + pools);
 
