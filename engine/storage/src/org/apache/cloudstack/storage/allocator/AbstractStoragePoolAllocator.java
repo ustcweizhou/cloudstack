@@ -18,6 +18,7 @@ package org.apache.cloudstack.storage.allocator;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -117,7 +118,7 @@ public abstract class AbstractStoragePoolAllocator extends AdapterBase implement
 
         List<Long> poolIdsByCapacity = _capacityDao.orderHostsByFreeCapacity(clusterId, capacityType);
         if (s_logger.isDebugEnabled()) {
-            s_logger.debug("List of pools in descending order of free capacity: "+ poolIdsByCapacity);
+            s_logger.debug("List of All pools in descending order of free capacity: "+ poolIdsByCapacity);
         }
 
       //now filter the given list of Pools by this ordered list
@@ -134,6 +135,7 @@ public abstract class AbstractStoragePoolAllocator extends AdapterBase implement
           reorderedPools.add(poolMap.get(id));
       }
 
+      s_logger.debug("List of available pools in descending order of free capacity: " + poolIdsByCapacity);
       return reorderedPools;
     }
 
@@ -248,4 +250,20 @@ public abstract class AbstractStoragePoolAllocator extends AdapterBase implement
         }
         return true;
     }
+
+    protected String[] getDomainStorageTags(DiskProfile dskCh) {
+        String[] tags = dskCh.getTags();
+        if (tags.length == 0) {
+            final Volume volume = _volumeDao.findById(dskCh.getVolumeId());
+            String storagetags = StorageManager.DomainStorageTag.valueInDomain(volume.getDomainId());
+            if (storagetags != null && !storagetags.isEmpty()) {
+                tags = storagetags.split(",");
+                s_logger.debug("Looking for pools having storage tags of domain: " + Arrays.toString(tags));
+            } else {
+                tags = new String[0];
+            }
+        }
+        return tags;
+    }
+
 }

@@ -73,6 +73,8 @@ public class PrimaryDataStoreDaoImpl extends GenericDaoBase<StoragePoolVO, Long>
     protected final String TagsSqlPrefix = "SELECT storage_pool.* from storage_pool LEFT JOIN storage_pool_tags ON storage_pool.id = storage_pool_tags.pool_id WHERE storage_pool.removed is null and storage_pool.status = 'Up' and storage_pool.data_center_id = ? and (storage_pool.pod_id = ? or storage_pool.pod_id is null) and storage_pool.scope = ? and (";
     protected final String TagsSqlSuffix = ") GROUP BY storage_pool_tags.pool_id HAVING COUNT(storage_pool_tags.tag) >= ?";
 
+    private final String StoragePoolNoTagSearch = "SELECT storage_pool.* FROM storage_pool LEFT JOIN storage_pool_tags spt ON storage_pool.id = spt.pool_id WHERE status = 'Up' AND storage_pool.data_center_id = ? AND spt.tag IS NULL";
+
     /**
      * Used in method findPoolsByDetailsOrTagsInternal
      */
@@ -397,7 +399,7 @@ public class PrimaryDataStoreDaoImpl extends GenericDaoBase<StoragePoolVO, Long>
     public List<StoragePoolVO> findPoolsByTags(long dcId, long podId, Long clusterId, String[] tags) {
         List<StoragePoolVO> storagePools = null;
         if (tags == null || tags.length == 0) {
-            storagePools = listBy(dcId, podId, clusterId, ScopeType.CLUSTER);
+            storagePools = storagePoolNoTagSearch(dcId, podId, clusterId, ScopeType.CLUSTER);
         } else {
             String sqlValues = getSqlValuesFromStorageTags(tags);
             storagePools = findPoolsByDetailsOrTagsInternal(dcId, podId, clusterId, ScopeType.CLUSTER, sqlValues, ValueType.TAGS, tags.length);
@@ -430,7 +432,7 @@ public class PrimaryDataStoreDaoImpl extends GenericDaoBase<StoragePoolVO, Long>
     public List<StoragePoolVO> findLocalStoragePoolsByTags(long dcId, long podId, Long clusterId, String[] tags) {
         List<StoragePoolVO> storagePools = null;
         if (tags == null || tags.length == 0) {
-            storagePools = listBy(dcId, podId, clusterId, ScopeType.HOST);
+            storagePools = storagePoolNoTagSearch(dcId, podId, clusterId, ScopeType.HOST);
         } else {
             String sqlValues = getSqlValuesFromStorageTags(tags);
             storagePools = findPoolsByDetailsOrTagsInternal(dcId, podId, clusterId, ScopeType.HOST, sqlValues, ValueType.TAGS, tags.length);
@@ -472,14 +474,18 @@ public class PrimaryDataStoreDaoImpl extends GenericDaoBase<StoragePoolVO, Long>
         return listBy(sc);
     }
 
+    private List<StoragePoolVO> listAllZoneWideStoragePools(long dcId) {
+        QueryBuilder<StoragePoolVO> sc = QueryBuilder.create(StoragePoolVO.class);
+        sc.and(sc.entity().getDataCenterId(), Op.EQ, dcId);
+        sc.and(sc.entity().getStatus(), Op.EQ, Status.Up);
+        sc.and(sc.entity().getScope(), Op.EQ, ScopeType.ZONE);
+        return sc.list();
+    }
+
     @Override
     public List<StoragePoolVO> findZoneWideStoragePoolsByTags(long dcId, String[] tags) {
         if (tags == null || tags.length == 0) {
-            QueryBuilder<StoragePoolVO> sc = QueryBuilder.create(StoragePoolVO.class);
-            sc.and(sc.entity().getDataCenterId(), Op.EQ, dcId);
-            sc.and(sc.entity().getStatus(), Op.EQ, Status.Up);
-            sc.and(sc.entity().getScope(), Op.EQ, ScopeType.ZONE);
-            return sc.list();
+            return storagePoolNoTagSearch(dcId, null, null, null);
         } else {
             String sqlValues = getSqlValuesFromStorageTags(tags);
             String sql = getSqlPreparedStatement(ZoneWideTagsSqlPrefix, ZoneWideTagsSqlSuffix, sqlValues, null);
@@ -553,5 +559,42 @@ public class PrimaryDataStoreDaoImpl extends GenericDaoBase<StoragePoolVO, Long>
     @Override
     public void deletePoolTags(long poolId) {
         _tagsDao.deleteTags(poolId);
+    }
+
+    private List<StoragePoolVO> storagePoolNoTagSearch(long dataCenterId, Long podId, Long clusterId, ScopeType scope) {
+        StringBuilder sql = new StringBuilder(StoragePoolNoTagSearch);
+        if (podId != null) {
+            sql.append(" AND (pod_id IS NULL OR pod_id = ?)");
+        }
+        if (clusterId != null) {
+            sql.append(" AND (cluster_id IS NULL OR cluster_id = ?)");
+        }
+        if (scope != null) {
+            sql.append(" AND scope = ?");
+        }
+        TransactionLegacy txn = TransactionLegacy.currentTxn();
+        PreparedStatement pstmt = null;
+        try {
+            pstmt = txn.prepareAutoCloseStatement(sql.toString());
+            int i = 1;
+            pstmt.setLong(i++, dataCenterId);
+            if (podId != null) {
+                 pstmt.setLong(i++, podId);
+            }
+            if (clusterId != null) {
+                 pstmt.setLong(i++, clusterId);
+            }
+            if (scope != null) {
+                 pstmt.setString(i++, scope.toString());
+            }
+            ResultSet rs = pstmt.executeQuery();
+            List<StoragePoolVO> pools = new ArrayList<StoragePoolVO>();
+            while (rs.next()) {
+                pools.add(toEntityBean(rs, false));
+            }
+            return pools;
+        } catch (SQLException e) {
+            throw new CloudRuntimeException("Unable to execute " + pstmt, e);
+        }
     }
 }
