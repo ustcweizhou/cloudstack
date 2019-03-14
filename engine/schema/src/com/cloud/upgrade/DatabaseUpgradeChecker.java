@@ -95,6 +95,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
@@ -562,6 +563,8 @@ public class DatabaseUpgradeChecker implements SystemIntegrityChecker {
             throw new CloudRuntimeException(errorMessage);
         }
 
+        AddMinorVersionToVersion();
+
         for (DbUpgrade upgrade : upgrades) {
             VersionVO version;
             s_logger.debug("Running upgrade " + upgrade.getClass().getSimpleName() + " to upgrade from " + upgrade.getUpgradableVersionRange()[0] + "-" + upgrade
@@ -696,6 +699,36 @@ public class DatabaseUpgradeChecker implements SystemIntegrityChecker {
         }
 
         updateMinorVersion();
+    }
+
+    private void AddMinorVersionToVersion() {
+        s_logger.debug("Adding minor_version column to version table");
+        TransactionLegacy txn = TransactionLegacy.open("Upgrade");
+        txn.start();
+        try {
+            Connection conn;
+            try {
+                conn = txn.getConnection();
+            } catch (SQLException e) {
+                String errorMessage = "Unable to upgrade the database";
+                s_logger.error(errorMessage, e);
+                throw new CloudRuntimeException(errorMessage, e);
+            }
+            PreparedStatement insertColumn = conn.prepareStatement("ALTER TABLE `cloud`.`version` ADD COLUMN `minor_version` varchar(100) COMMENT 'minor version' AFTER `version`");
+            insertColumn.executeUpdate();
+            PreparedStatement alterKeys = conn.prepareStatement("ALTER TABLE `cloud`.`version` DROP KEY `version`");
+            alterKeys.executeUpdate();
+            alterKeys = conn.prepareStatement("ALTER TABLE `cloud`.`version` DROP INDEX `i_version__version`");
+            alterKeys.executeUpdate();
+            alterKeys = conn.prepareStatement("ALTER TABLE `cloud`.`version` ADD UNIQUE `i_version__minor_version`(`version`, `minor_version`)");
+            alterKeys.executeUpdate();
+            txn.commit();
+            s_logger.debug("Added minor_version column to version table");
+        } catch (final SQLException e) {
+            s_logger.warn("Adding minor_version column to version table failed, skipping");
+        } finally {
+            txn.close();
+        }
     }
 
     private void updateMinorVersion() {
