@@ -93,6 +93,8 @@ public interface StorageManager extends StorageService {
             ConfigKey.Scope.Global,
             null);
 
+    public static final ConfigKey<Boolean> AllowOfferingsNoStorageTagOnAllStoragePools = new ConfigKey<Boolean>(Boolean.class, "allow.service.disk.offering.without.storage.tag.on.all.storage.pools", "Advanced", "true",
+        "Indicates whether allow vm/volume with service/disk offering which do not have storage tag to be allocated in all storage pools. If false, then they will be allocated to storage pools without storage tag", true, ConfigKey.Scope.Global, null);
     public static final ConfigKey<String> AccountDefaultStorageTag = new ConfigKey<String>(String.class, "account.default.storage.tag", "Advanced", "",
         "The service/disk offerings without storage tag will use this storage tag in vm/volume allocation.", true, ConfigKey.Scope.Account, null);
 
