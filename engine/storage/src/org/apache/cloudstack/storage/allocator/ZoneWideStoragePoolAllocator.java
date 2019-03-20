@@ -68,7 +68,8 @@ public class ZoneWideStoragePoolAllocator extends AbstractStoragePoolAllocator {
 
         List<StoragePool> suitablePools = new ArrayList<StoragePool>();
 
-        List<StoragePoolVO> storagePools = _storagePoolDao.findZoneWideStoragePoolsByTags(plan.getDataCenterId(), dskCh.getTags());
+        String[] tags = getAccountDefaultStorageTags(dskCh);
+        List<StoragePoolVO> storagePools = _storagePoolDao.findZoneWideStoragePoolsByTags(plan.getDataCenterId(), tags);
         if (storagePools == null) {
             storagePools = new ArrayList<StoragePoolVO>();
         }
