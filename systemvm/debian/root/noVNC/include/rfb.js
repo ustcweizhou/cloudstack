@@ -185,7 +185,7 @@ var RFB;
         this._sock.on('message', this._handle_message.bind(this));
         this._sock.on('open', function () {
             if (this._rfb_state === 'connect') {
-                this._updateState('ProtocolVersion', "Starting VNC handshake");
+                this._updateState('ServerInitialisation', "Starting Server Initialisation");
             } else {
                 this._fail("Got unexpected WebSocket connection");
             }
