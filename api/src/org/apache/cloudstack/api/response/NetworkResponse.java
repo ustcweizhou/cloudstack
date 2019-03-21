@@ -16,18 +16,18 @@
 // under the License.
 package org.apache.cloudstack.api.response;
 
-import java.util.List;
-
-import java.util.Set;
+import com.cloud.network.Network;
+import com.cloud.projects.ProjectAccount;
+import com.cloud.serializer.Param;
+import com.google.gson.annotations.SerializedName;
 import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.BaseResponse;
 import org.apache.cloudstack.api.EntityReference;
 
-import com.cloud.network.Network;
-import com.cloud.projects.ProjectAccount;
-import com.cloud.serializer.Param;
-import com.google.gson.annotations.SerializedName;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("unused")
 @EntityReference(value = {Network.class, ProjectAccount.class})
@@ -232,6 +232,10 @@ public class NetworkResponse extends BaseResponse implements ControlledEntityRes
     @SerializedName(ApiConstants.REDUNDANT_ROUTER)
     @Param(description = "If the network has redundant routers enabled", since = "4.11.1")
     private Boolean redundantRouter;
+
+    @SerializedName(ApiConstants.DETAILS)
+    @Param(description = "details for the network")
+    private Map<String, String> details;
 
     public Boolean getDisplayNetwork() {
         return displayNetwork;
@@ -448,5 +452,9 @@ public class NetworkResponse extends BaseResponse implements ControlledEntityRes
 
     public void setRedundantRouter(Boolean redundantRouter) {
         this.redundantRouter = redundantRouter;
+    }
+
+    public void setDetails(Map<String, String> details) {
+        this.details = details;
     }
 }

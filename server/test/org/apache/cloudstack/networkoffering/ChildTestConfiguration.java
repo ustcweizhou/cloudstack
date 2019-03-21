@@ -17,8 +17,6 @@
 
 package org.apache.cloudstack.networkoffering;
 
-import java.io.IOException;
-
 import com.cloud.agent.AgentManager;
 import com.cloud.alert.AlertManager;
 import com.cloud.api.query.dao.UserAccountJoinDaoImpl;
@@ -56,6 +54,7 @@ import com.cloud.network.dao.FirewallRulesDcidrsDaoImpl;
 import com.cloud.network.dao.IPAddressDaoImpl;
 import com.cloud.network.dao.LoadBalancerDaoImpl;
 import com.cloud.network.dao.NetworkDao;
+import com.cloud.network.dao.NetworkDetailsDao;
 import com.cloud.network.dao.NetworkDomainDaoImpl;
 import com.cloud.network.dao.NetworkServiceMapDaoImpl;
 import com.cloud.network.dao.PhysicalNetworkDaoImpl;
@@ -122,6 +121,8 @@ import org.springframework.context.annotation.FilterType;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.TypeFilter;
+
+import java.io.IOException;
 
 @Configuration
 @ComponentScan(basePackageClasses = {AccountVlanMapDaoImpl.class, DomainVlanMapDaoImpl.class, VolumeDaoImpl.class, HostPodDaoImpl.class, DomainDaoImpl.class, ServiceOfferingDaoImpl.class,
@@ -322,6 +323,11 @@ public class
     @Bean
     public DomainDetailsDao domainDetailsDao() {
         return Mockito.mock(DomainDetailsDao.class);
+    }
+
+    @Bean
+    public NetworkDetailsDao networkDetailsDao() {
+        return Mockito.mock(NetworkDetailsDao.class);
     }
 
     @Bean

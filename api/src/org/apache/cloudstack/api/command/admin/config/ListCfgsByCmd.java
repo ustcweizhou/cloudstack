@@ -16,12 +16,7 @@
 // under the License.
 package org.apache.cloudstack.api.command.admin.config;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.cloudstack.api.response.DomainResponse;
-import org.apache.log4j.Logger;
-
+import com.cloud.utils.Pair;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.BaseListCmd;
@@ -29,13 +24,17 @@ import org.apache.cloudstack.api.Parameter;
 import org.apache.cloudstack.api.response.AccountResponse;
 import org.apache.cloudstack.api.response.ClusterResponse;
 import org.apache.cloudstack.api.response.ConfigurationResponse;
+import org.apache.cloudstack.api.response.DomainResponse;
 import org.apache.cloudstack.api.response.ImageStoreResponse;
 import org.apache.cloudstack.api.response.ListResponse;
+import org.apache.cloudstack.api.response.NetworkResponse;
 import org.apache.cloudstack.api.response.StoragePoolResponse;
 import org.apache.cloudstack.api.response.ZoneResponse;
 import org.apache.cloudstack.config.Configuration;
+import org.apache.log4j.Logger;
 
-import com.cloud.utils.Pair;
+import java.util.ArrayList;
+import java.util.List;
 
 @APICommand(name = "listConfigurations", description = "Lists all configurations.", responseObject = ConfigurationResponse.class,
         requestHasSensitiveInfo = false, responseHasSensitiveInfo = false)
@@ -90,6 +89,12 @@ public class ListCfgsByCmd extends BaseListCmd {
             description = "the ID of the Image Store to update the parameter value for corresponding image store")
     private Long imageStoreId;
 
+    @Parameter(name = ApiConstants.NETWORK_ID,
+               type = CommandType.UUID,
+               entityType = NetworkResponse.class,
+               description = "the ID of the Network to update the parameter value for corresponding network")
+    private Long networkId;
+
     // ///////////////////////////////////////////////////
     // ///////////////// Accessors ///////////////////////
     // ///////////////////////////////////////////////////
@@ -124,6 +129,10 @@ public class ListCfgsByCmd extends BaseListCmd {
 
     public Long getImageStoreId() {
         return imageStoreId;
+    }
+
+    public Long getNetworkId() {
+        return networkId;
     }
 
     @Override
@@ -172,8 +181,11 @@ public class ListCfgsByCmd extends BaseListCmd {
             if (getDomainId() != null) {
                 cfgResponse.setScope("domain");
             }
-            if (getImageStoreId() != null){
+            if (getImageStoreId() != null) {
                 cfgResponse.setScope("imagestore");
+            }
+            if (getNetworkId() != null) {
+                cfgResponse.setScope("network");
             }
             configResponses.add(cfgResponse);
         }

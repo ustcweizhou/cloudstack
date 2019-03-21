@@ -4034,6 +4034,8 @@ class Configurations:
             cmd.domainid=domainid
         if accountid:
             cmd.accountid=accountid
+        if networkid:
+            cmd.networkid=networkid
         apiclient.updateConfiguration(cmd)
 
 
