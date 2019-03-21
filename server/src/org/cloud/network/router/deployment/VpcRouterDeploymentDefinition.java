@@ -161,12 +161,14 @@ public class VpcRouterDeploymentDefinition extends RouterDeploymentDefinition {
 
     @Override
     protected void findServiceOfferingId() {
-        serviceOfferingId = vpcOffDao.findById(vpc.getVpcOfferingId()).getServiceOfferingId();
         if (serviceOfferingId == null) {
             findVpcServiceOfferingId();
         }
         if (serviceOfferingId == null) {
             findAccountServiceOfferingId();
+        }
+        if (serviceOfferingId == null) {
+            serviceOfferingId = vpcOffDao.findById(vpc.getVpcOfferingId()).getServiceOfferingId();
         }
         if (serviceOfferingId == null) {
             findDefaultServiceOfferingId();

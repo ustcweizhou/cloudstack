@@ -57,4 +57,5 @@
     <bean id="messageBus" class="org.apache.cloudstack.framework.messagebus.MessageBusBase" />
     <bean id="vpcDaoImpl" class="com.cloud.network.vpc.dao.VpcDaoImpl" />
     <bean id="vpcSvcMapImpl" class="com.cloud.network.vpc.dao.VpcServiceMapDaoImpl" />
+    <bean id="vpcDetailsDaoImpl" class="org.apache.cloudstack.resourcedetail.dao.VpcDetailsDaoImpl" />
 </beans>

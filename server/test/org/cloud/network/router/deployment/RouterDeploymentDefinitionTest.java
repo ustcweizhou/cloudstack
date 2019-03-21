@@ -668,7 +668,7 @@ public class RouterDeploymentDefinitionTest extends RouterDeploymentDefinitionTe
     @Test
     public void testFindOfferingIdFromNetwork() {
         // Prepare
-        deployment.serviceOfferingId = 1L;
+        deployment.serviceOfferingId = null;
         when(mockNw.getNetworkOfferingId()).thenReturn(OFFERING_ID);
         when(mockNetworkOfferingDao.findById(OFFERING_ID)).thenReturn(mockNwOfferingVO);
         when(mockNwOfferingVO.getServiceOfferingId()).thenReturn(OFFERING_ID);
@@ -684,7 +684,7 @@ public class RouterDeploymentDefinitionTest extends RouterDeploymentDefinitionTe
     @Test
     public void testFindOfferingIdDefault() {
         // Prepare
-        deployment.serviceOfferingId = 1L;
+        deployment.serviceOfferingId = null;
         when(mockNw.getNetworkOfferingId()).thenReturn(OFFERING_ID);
         when(mockNetworkOfferingDao.findById(OFFERING_ID)).thenReturn(mockNwOfferingVO);
         when(mockNwOfferingVO.getServiceOfferingId()).thenReturn(null);
