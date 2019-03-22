@@ -4017,7 +4017,7 @@ class Configurations:
     """Manage Configuration"""
 
     @classmethod
-    def update(cls, apiclient, name, value=None, zoneid=None, clusterid=None, storageid=None, domainid=None, accountid=None, networkid=None):
+    def update(cls, apiclient, name, value=None, zoneid=None, clusterid=None, storageid=None, domainid=None, accountid=None, networkid=None, vpcid=None):
         """Updates the specified configuration"""
 
         cmd = updateConfiguration.updateConfigurationCmd()
@@ -4036,6 +4036,8 @@ class Configurations:
             cmd.accountid=accountid
         if networkid:
             cmd.networkid=networkid
+        if vpcid:
+            cmd.vpcid=vpcid
         apiclient.updateConfiguration(cmd)
 
 
@@ -4511,11 +4513,13 @@ class VPC:
         cmd.id = self.id
         return apiclient.deleteVPC(cmd)
 
-    def restart(self, apiclient):
+    def restart(self, apiclient, cleanup=None):
         """Restarts the VPC connections"""
 
         cmd = restartVPC.restartVPCCmd()
         cmd.id = self.id
+        if cleanup:
+            cmd.cleanup = cleanup
         return apiclient.restartVPC(cmd)
 
     @classmethod
