@@ -1255,6 +1255,10 @@
                                 hiddenTabs.push("virtualRouters");
                             }
 
+                            if(!isAdmin()) {
+                                hiddenTabs.push('settings');
+                            }
+
                             return hiddenTabs;
                         },
 
@@ -1488,6 +1492,55 @@
                                         }
                                     });
                                 }
+                            },
+
+                            settings: {
+                                title: 'label.settings',
+                                custom: cloudStack.uiCustom.granularSettings({
+                                    dataProvider: function(args) {
+                                        $.ajax({
+                                            url: createURL('listConfigurations&networkid=' + args.context.networks[0].id),
+                                            data: listViewDataProvider(args, {}, { searchBy: 'name' }),
+                                            success: function(json) {
+                                                args.response.success({
+                                                    data: json.listconfigurationsresponse.configuration
+                                                });
+
+                                            },
+
+                                            error: function(json) {
+                                                args.response.error(parseXMLHttpResponse(json));
+
+                                            }
+                                        });
+
+                                    },
+                                    actions: {
+                                        edit: function(args) {
+                                            var data = {
+                                                name: args.data.jsonObj.name,
+                                                value: args.data.value
+                                            };
+
+                                            $.ajax({
+                                                url: createURL('updateConfiguration&networkid=' + args.context.networks[0].id),
+                                                data: data,
+                                                success: function(json) {
+                                                    var item = json.updateconfigurationresponse.configuration;
+                                                    args.response.success({
+                                                        data: item
+                                                    });
+                                                },
+
+                                                error: function(json) {
+                                                    args.response.error(parseXMLHttpResponse(json));
+                                                }
+
+                                            });
+
+                                        }
+                                    }
+                                })
                             },
 
                             egressRules: {

@@ -4017,7 +4017,7 @@ class Configurations:
     """Manage Configuration"""
 
     @classmethod
-    def update(cls, apiclient, name, value=None, zoneid=None, clusterid=None, storageid=None, domainid=None, accountid=None):
+    def update(cls, apiclient, name, value=None, zoneid=None, clusterid=None, storageid=None, domainid=None, accountid=None, networkid=None):
         """Updates the specified configuration"""
 
         cmd = updateConfiguration.updateConfigurationCmd()
@@ -4034,6 +4034,8 @@ class Configurations:
             cmd.domainid=domainid
         if accountid:
             cmd.accountid=accountid
+        if networkid:
+            cmd.networkid=networkid
         apiclient.updateConfiguration(cmd)
 
 

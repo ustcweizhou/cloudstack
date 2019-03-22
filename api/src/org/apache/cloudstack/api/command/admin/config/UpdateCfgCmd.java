@@ -16,10 +16,9 @@
 // under the License.
 package org.apache.cloudstack.api.command.admin.config;
 
+import com.cloud.user.Account;
 import com.google.common.base.Strings;
 import org.apache.cloudstack.acl.RoleService;
-import org.apache.cloudstack.api.response.DomainResponse;
-import org.apache.log4j.Logger;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiArgValidator;
 import org.apache.cloudstack.api.ApiConstants;
@@ -30,12 +29,13 @@ import org.apache.cloudstack.api.ServerApiException;
 import org.apache.cloudstack.api.response.AccountResponse;
 import org.apache.cloudstack.api.response.ClusterResponse;
 import org.apache.cloudstack.api.response.ConfigurationResponse;
+import org.apache.cloudstack.api.response.DomainResponse;
 import org.apache.cloudstack.api.response.ImageStoreResponse;
+import org.apache.cloudstack.api.response.NetworkResponse;
 import org.apache.cloudstack.api.response.StoragePoolResponse;
 import org.apache.cloudstack.api.response.ZoneResponse;
 import org.apache.cloudstack.config.Configuration;
-
-import com.cloud.user.Account;
+import org.apache.log4j.Logger;
 
 @APICommand(name = "updateConfiguration", description = "Updates a configuration.", responseObject = ConfigurationResponse.class,
         requestHasSensitiveInfo = false, responseHasSensitiveInfo = false)
@@ -90,6 +90,12 @@ public class UpdateCfgCmd extends BaseCmd {
             validations = ApiArgValidator.PositiveNumber)
     private Long imageStoreId;
 
+    @Parameter(name = ApiConstants.NETWORK_ID,
+               type = CommandType.UUID,
+               entityType = NetworkResponse.class,
+               description = "the ID of the Network to update the parameter value for corresponding network")
+    private Long networkId;
+
     /////////////////////////////////////////////////////
     /////////////////// Accessors ///////////////////////
     /////////////////////////////////////////////////////
@@ -128,6 +134,10 @@ public class UpdateCfgCmd extends BaseCmd {
 
     public Long getImageStoreId() {
         return imageStoreId;
+    }
+
+    public Long getNetworkId() {
+        return networkId;
     }
 
     /////////////////////////////////////////////////////
@@ -170,6 +180,9 @@ public class UpdateCfgCmd extends BaseCmd {
             }
             if (getDomainId() != null) {
                 response.setScope("domain");
+            }
+            if (getNetworkId() != null) {
+                response.setScope("network");
             }
             response.setValue(value);
             this.setResponseObject(response);
