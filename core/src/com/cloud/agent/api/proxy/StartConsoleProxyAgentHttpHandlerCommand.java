@@ -19,9 +19,12 @@
 
 package com.cloud.agent.api.proxy;
 
+import org.apache.cloudstack.framework.security.keystore.KeystoreManager.Certificates;
+
 import com.cloud.agent.api.Command;
 import com.cloud.agent.api.LogLevel;
 import com.cloud.agent.api.LogLevel.Log4jLevel;
+import com.cloud.consoleproxy.api.KeyIVPair;
 
 public class StartConsoleProxyAgentHttpHandlerCommand extends Command {
     @LogLevel(Log4jLevel.Off)
@@ -30,6 +33,8 @@ public class StartConsoleProxyAgentHttpHandlerCommand extends Command {
     private String keystorePassword;
     @LogLevel(Log4jLevel.Off)
     private String encryptorPassword;
+    private Certificates certificates;
+    private KeyIVPair keyIvPair;
 
     public StartConsoleProxyAgentHttpHandlerCommand() {
         super();
@@ -67,5 +72,21 @@ public class StartConsoleProxyAgentHttpHandlerCommand extends Command {
 
     public void setEncryptorPassword(String encryptorPassword) {
         this.encryptorPassword = encryptorPassword;
+    }
+
+    public void setCertificates(Certificates certificates) {
+        this.certificates = certificates;
+    }
+
+    public Certificates getCertificates() {
+        return certificates;
+    }
+
+    public void setKeyIVPair(KeyIVPair keyIvPair) {
+        this.keyIvPair = keyIvPair;
+    }
+
+    public KeyIVPair getKeyIVPair() {
+        return keyIvPair;
     }
 }

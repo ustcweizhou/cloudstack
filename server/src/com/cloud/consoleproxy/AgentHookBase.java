@@ -30,6 +30,7 @@ import com.google.gson.GsonBuilder;
 import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.framework.security.keys.KeysManager;
 import org.apache.cloudstack.framework.security.keystore.KeystoreManager;
+import org.apache.cloudstack.framework.security.keystore.KeystoreManager.Certificates;
 
 import com.cloud.agent.AgentManager;
 import com.cloud.agent.api.AgentControlAnswer;
@@ -43,13 +44,13 @@ import com.cloud.agent.api.StartupCommand;
 import com.cloud.agent.api.StartupProxyCommand;
 import com.cloud.agent.api.proxy.StartConsoleProxyAgentHttpHandlerCommand;
 import com.cloud.configuration.Config;
+import com.cloud.consoleproxy.api.KeyIVPair;
 import com.cloud.exception.AgentUnavailableException;
 import com.cloud.exception.OperationTimedoutException;
 import com.cloud.host.Host;
 import com.cloud.host.HostVO;
 import com.cloud.host.Status;
 import com.cloud.host.dao.HostDao;
-import com.cloud.servlet.ConsoleProxyPasswordBasedEncryptor;
 import com.cloud.servlet.ConsoleProxyServlet;
 import com.cloud.utils.Ternary;
 import com.cloud.vm.VirtualMachine;
@@ -69,6 +70,7 @@ public abstract class AgentHookBase implements AgentHook {
     AgentManager _agentMgr;
     KeystoreManager _ksMgr;
     KeysManager _keysMgr;
+    ConsoleProxyManager _consoleMgr;
 
     public AgentHookBase(VMInstanceDao instanceDao, HostDao hostDao, ConfigurationDao cfgDao, KeystoreManager ksMgr, AgentManager agentMgr, KeysManager keysMgr) {
         _instanceDao = instanceDao;
@@ -198,16 +200,22 @@ public abstract class AgentHookBase implements AgentHook {
             String storePassword = Base64.encodeBase64String(randomBytes);
 
             byte[] ksBits = null;
+            Certificates certificates = null;
             String consoleProxyUrlDomain = _configDao.getValue(Config.ConsoleProxyUrlDomain.key());
             if (consoleProxyUrlDomain == null || consoleProxyUrlDomain.isEmpty()) {
                 s_logger.debug("SSL is disabled for console proxy based on global config, skip loading certificates");
             } else {
                 ksBits = _ksMgr.getKeystoreBits(ConsoleProxyManager.CERTIFICATE_NAME, ConsoleProxyManager.CERTIFICATE_NAME, storePassword);
+                certificates = _ksMgr.getCertificates(ConsoleProxyManager.CERTIFICATE_NAME);
                 //ks manager raises exception if ksBits are null, hence no need to explicltly handle the condition
             }
 
             cmd = new StartConsoleProxyAgentHttpHandlerCommand(ksBits, storePassword);
             cmd.setEncryptorPassword(getEncryptorPassword());
+            s_logger.debug("Adding data for noVNC based console proxy");
+            cmd.setCertificates(certificates);
+            KeyIVPair keyIvPair = new KeyIVPair(ConsoleProxyManager.NoVncEncryptionKey.value(), ConsoleProxyManager.NoVncEncryptionIV.value());
+            cmd.setKeyIVPair(keyIvPair);
 
             HostVO consoleProxyHost = findConsoleProxyHost(startupCmd);
 
@@ -238,14 +246,14 @@ public abstract class AgentHookBase implements AgentHook {
     private String getEncryptorPassword() {
         String key;
         String iv;
-        ConsoleProxyPasswordBasedEncryptor.KeyIVPair keyIvPair = null;
+        KeyIVPair keyIvPair = null;
 
         // if we failed after reset, something is definitely wrong
         for (int i = 0; i < 2; i++) {
             key = _keysMgr.getEncryptionKey();
             iv = _keysMgr.getEncryptionIV();
 
-            keyIvPair = new ConsoleProxyPasswordBasedEncryptor.KeyIVPair(key, iv);
+            keyIvPair = new KeyIVPair(key, iv);
 
             if (keyIvPair.getIvBytes() == null || keyIvPair.getIvBytes().length != 16 || keyIvPair.getKeyBytes() == null || keyIvPair.getKeyBytes().length != 16) {
 

@@ -30,6 +30,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
+import com.cloud.consoleproxy.api.KeyIVPair;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -127,35 +129,6 @@ public class ConsoleProxyPasswordBasedEncryptor {
 
         String json = decryptText(encrypted);
         return (T)gson.fromJson(json, clz);
-    }
-
-    public static class KeyIVPair {
-        String base64EncodedKeyBytes;
-        String base64EncodedIvBytes;
-
-        public KeyIVPair() {
-        }
-
-        public KeyIVPair(String base64EncodedKeyBytes, String base64EncodedIvBytes) {
-            this.base64EncodedKeyBytes = base64EncodedKeyBytes;
-            this.base64EncodedIvBytes = base64EncodedIvBytes;
-        }
-
-        public byte[] getKeyBytes() {
-            return Base64.decodeBase64(base64EncodedKeyBytes);
-        }
-
-        public void setKeyBytes(byte[] keyBytes) {
-            base64EncodedKeyBytes = Base64.encodeBase64URLSafeString(keyBytes);
-        }
-
-        public byte[] getIvBytes() {
-            return Base64.decodeBase64(base64EncodedIvBytes);
-        }
-
-        public void setIvBytes(byte[] ivBytes) {
-            base64EncodedIvBytes = Base64.encodeBase64URLSafeString(ivBytes);
-        }
     }
 
 }
