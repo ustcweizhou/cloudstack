@@ -92,6 +92,8 @@ import com.cloud.network.dao.PhysicalNetworkTrafficTypeVO;
 import com.cloud.network.dao.PhysicalNetworkVO;
 import com.cloud.network.rules.LoadBalancerContainer.Scheme;
 import com.cloud.network.vpc.VpcManager;
+import com.cloud.network.vpc.VpcVO;
+import com.cloud.network.vpc.dao.VpcDao;
 import com.cloud.offering.DiskOffering;
 import com.cloud.offering.NetworkOffering;
 import com.cloud.offering.NetworkOffering.Availability;
@@ -205,6 +207,8 @@ import org.apache.cloudstack.region.PortableIpVO;
 import org.apache.cloudstack.region.Region;
 import org.apache.cloudstack.region.RegionVO;
 import org.apache.cloudstack.region.dao.RegionDao;
+import org.apache.cloudstack.resourcedetail.VpcDetailVO;
+import org.apache.cloudstack.resourcedetail.dao.VpcDetailsDao;
 import org.apache.cloudstack.storage.datastore.db.ImageStoreDao;
 import org.apache.cloudstack.storage.datastore.db.ImageStoreDetailsDao;
 import org.apache.cloudstack.storage.datastore.db.ImageStoreVO;
@@ -334,6 +338,10 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
     DomainDetailsDao _domainDetailsDao;
     @Inject
     NetworkDetailsDao _networkDetailsDao;
+    @Inject
+    VpcDao _vpcDao;
+    @Inject
+    VpcDetailsDao _vpcDetailsDao;
     @Inject
     PrimaryDataStoreDao _storagePoolDao;
     @Inject
@@ -593,6 +601,21 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                 }
                 break;
 
+            case Vpc:
+                final VpcVO vpc = _vpcDao.findById(resourceId);
+                if (vpc == null) {
+                    throw new InvalidParameterValueException("unable to find vpc by id " + resourceId);
+                }
+                VpcDetailVO vpcDetailVO = _vpcDetailsDao.findDetail(resourceId, name);
+                if (vpcDetailVO == null) {
+                    vpcDetailVO = new VpcDetailVO(resourceId, name, value, true);
+                    _vpcDetailsDao.persist(vpcDetailVO);
+                } else {
+                    vpcDetailVO.setValue(value);
+                    _vpcDetailsDao.update(vpcDetailVO.getId(), vpcDetailVO);
+                }
+                break;
+
             default:
                 throw new InvalidParameterValueException("Scope provided is invalid");
             }
@@ -703,6 +726,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         final Long imageStoreId = cmd.getImageStoreId();
         final Long domainId = cmd.getDomainId();
         final Long networkId = cmd.getNetworkId();
+        final Long vpcId = cmd.getVpcId();
         CallContext.current().setEventDetails(" Name: " + name + " New Value: " + (name.toLowerCase().contains("password") ? "*****" : value == null ? "" : value));
         // check if config value exists
         final ConfigurationVO config = _configDao.findByName(name);
@@ -756,6 +780,11 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         if (networkId != null) {
             scope = ConfigKey.Scope.Network.toString();
             id = networkId;
+            paramCountCheck++;
+        }
+        if (vpcId != null) {
+            scope = ConfigKey.Scope.Vpc.toString();
+            id = vpcId;
             paramCountCheck++;
         }
         if (storagepoolId != null) {

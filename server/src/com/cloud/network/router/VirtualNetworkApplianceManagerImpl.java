@@ -2586,7 +2586,7 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
     @Override
     public ConfigKey<?>[] getConfigKeys() {
         return new ConfigKey<?>[] { UseExternalDnsServers, routerVersionCheckEnabled, SetServiceMonitor, RouterAlertsCheckInterval,
-                VirtualRouterServiceOffering, NetworkVirtualRouterServiceOffering };
+                VirtualRouterServiceOffering, NetworkVirtualRouterServiceOffering, VpcVirtualRouterServiceOffering };
     }
 
     @Override

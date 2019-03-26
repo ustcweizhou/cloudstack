@@ -108,6 +108,7 @@ import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.region.PortableIpDaoImpl;
 import org.apache.cloudstack.region.PortableIpRangeDaoImpl;
 import org.apache.cloudstack.region.dao.RegionDaoImpl;
+import org.apache.cloudstack.resourcedetail.dao.VpcDetailsDao;
 import org.apache.cloudstack.storage.datastore.db.ImageStoreDaoImpl;
 import org.apache.cloudstack.storage.datastore.db.ImageStoreDetailsDaoImpl;
 import org.apache.cloudstack.storage.datastore.db.PrimaryDataStoreDaoImpl;
@@ -328,6 +329,10 @@ public class
     @Bean
     public NetworkDetailsDao networkDetailsDao() {
         return Mockito.mock(NetworkDetailsDao.class);
+    }
+
+    public VpcDetailsDao vpcDetailsDao() {
+        return Mockito.mock(VpcDetailsDao.class);
     }
 
     @Bean

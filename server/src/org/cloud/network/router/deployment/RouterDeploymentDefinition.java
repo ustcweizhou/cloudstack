@@ -416,12 +416,14 @@ public class RouterDeploymentDefinition {
     }
 
     protected void findServiceOfferingId() {
-        serviceOfferingId = networkOfferingDao.findById(guestNetwork.getNetworkOfferingId()).getServiceOfferingId();
         if (serviceOfferingId == null) {
             findNetworkServiceOfferingId();
         }
         if (serviceOfferingId == null) {
             findAccountServiceOfferingId();
+        }
+        if (serviceOfferingId == null) {
+            serviceOfferingId = networkOfferingDao.findById(guestNetwork.getNetworkOfferingId()).getServiceOfferingId();
         }
         if (serviceOfferingId == null) {
             findDefaultServiceOfferingId();
