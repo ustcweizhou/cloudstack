@@ -50,7 +50,10 @@ html {
 }
 
 #noVNC_buttons {
-  white-space: nowrap;
+  display: inline-block;
+  width: 200px;
+  float: right;
+  padding: 8px;
 }
 
 #noVNC_view_drag_button {
@@ -90,13 +93,71 @@ html {
   position: absolute;
 }
 
+#noVNC_status_bar {
+  display: inline-block;
+  width: 100%;
+  height: 32px;
+  background-color: #fff;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #D5D7D8;
+  text-align: left;
+}
+
+#noVNC_status span {
+   display: inline-block;
+   padding: 0px 7px 0 0;
+   width: 16px;
+   height: 16px;
+   position: relative;
+   top: 2px;
+}
+.noVNC_status_normal {
+  border: 1px solid #64B125;
+  background-color: #A1DF8A;
+  color: #575757;
+}
+.noVNC_status_error {
+  border: 1px solid #EEB4B4;
+  background-color: lightPink;
+  color: #C24B36;
+}
+.noVNC_status_warn {
+  border: 1px solid  #FCD116;
+  background-color: #FEF1B5;
+  color:#D98719;
+}
+
+.noVNC_status_error span {
+   background: url('../images/exclamation.png') no-repeat top left;
+}
+
+.noVNC_status_normal span {
+   background: url('../images/lock.png') no-repeat top left;
+}
+
+.noVNC_status_warn span {
+ background: url('../images/error.png') no-repeat top left;
+}
+
+#noVNC_status_container {
+  float: none;
+  display: block;
+  width: 100%;
+  height: 45px;
+  text-align: center;
+}
+
 #noVNC_status {
   font-size: 12px;
-  padding-top: 4px;
-  height:32px;
   text-align: center;
   font-weight: bold;
-  color: #fff;
+  padding: 6px 25px 10px;
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 2px auto;
+  display: inline-block;
+  max-width: 450px;
+  text-overflow: ellipsis;
 }
 
 #noVNC_settings_menu {
@@ -114,6 +175,7 @@ html {
 }
 
 #noVNC_container {
+  text-align: center;
   display: table;
   width:100%;
   height:100%;
@@ -142,8 +204,10 @@ html {
   position: absolute;
   left: 0;
   right: 0;
+  top: 43px;
   margin-left: auto;
   margin-right: auto;
+  clear: both;
 }
 
 #VNC_clipboard_clear_button {
@@ -249,38 +313,10 @@ html {
  * Advanced Styling
  */
 
-.noVNC_status_normal {
-  background: #b2bdcd; /* Old browsers */
-  background: -moz-linear-gradient(top, #b2bdcd 0%, #899cb3 49%, #7e93af 51%, #6e84a3 100%); /* FF3.6+ */
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#b2bdcd), color-stop(49%,#899cb3), color-stop(51%,#7e93af), color-stop(100%,#6e84a3)); /* Chrome,Safari4+ */
-  background: -webkit-linear-gradient(top, #b2bdcd 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* Chrome10+,Safari5.1+ */
-  background: -o-linear-gradient(top, #b2bdcd 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* Opera11.10+ */
-  background: -ms-linear-gradient(top, #b2bdcd 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* IE10+ */
-  background: linear-gradient(top, #b2bdcd 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* W3C */
-}
-.noVNC_status_error {
-  background: #f04040; /* Old browsers */
-  background: -moz-linear-gradient(top, #f04040 0%, #899cb3 49%, #7e93af 51%, #6e84a3 100%); /* FF3.6+ */
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#f04040), color-stop(49%,#899cb3), color-stop(51%,#7e93af), color-stop(100%,#6e84a3)); /* Chrome,Safari4+ */
-  background: -webkit-linear-gradient(top, #f04040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* Chrome10+,Safari5.1+ */
-  background: -o-linear-gradient(top, #f04040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* Opera11.10+ */
-  background: -ms-linear-gradient(top, #f04040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* IE10+ */
-  background: linear-gradient(top, #f04040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* W3C */
-}
-.noVNC_status_warn {
-  background: #f0f040; /* Old browsers */
-  background: -moz-linear-gradient(top, #f0f040 0%, #899cb3 49%, #7e93af 51%, #6e84a3 100%); /* FF3.6+ */
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#f0f040), color-stop(49%,#899cb3), color-stop(51%,#7e93af), color-stop(100%,#6e84a3)); /* Chrome,Safari4+ */
-  background: -webkit-linear-gradient(top, #f0f040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* Chrome10+,Safari5.1+ */
-  background: -o-linear-gradient(top, #f0f040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* Opera11.10+ */
-  background: -ms-linear-gradient(top, #f0f040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* IE10+ */
-  background: linear-gradient(top, #f0f040 0%,#899cb3 49%,#7e93af 51%,#6e84a3 100%); /* W3C */
-}
-
 /* Control bar */
 #noVNC_control_bar {
   position:fixed;
-  
+
   display:block;
   height:36px;
   left:0;
@@ -390,20 +426,15 @@ html {
 }
 
 #noVNC_logo {
-  margin-top: 170px;
+  background: url('../images/leaseweb_logo.png') no-repeat 4px 3px;
   margin-left: 10px;
-  color:yellow;
-  text-align:left;
-  font-family: 'Orbitron', 'OrbitronTTF', sans-serif;
-  line-height:90%;
-  text-shadow:
-       5px 5px 0 #000,
-      -1px -1px 0 #000,
-       1px -1px 0 #000,
-      -1px 1px 0 #000,
-       1px 1px 0 #000;
+  text-align: left;
+  line-height: 90%;
+  display: inline-block;
+  width: 200px;
+  height: 42px;
+  float: left;
 }
-
 
 #noVNC_logo span{
   color:green;
@@ -435,11 +466,30 @@ html {
   padding-right: 10px;
 }
 
-#noVNC_status {
-  z-index: 0;
-  position: absolute;
-  width: 100%;
-  margin-left: 0px;
+#noVNC_buttons input[type='button'] {
+  display: inline;
+  background-size: auto;
+  border-radius: 3px;
+  border: 1px solid #9d9d9d;
+  box-shadow: #cacaca 0px 1px 0px 0px;
+  color: #000;
+  cursor: pointer;
+  font-family: sans-serif;
+  font-size: 13px;
+  font-weight: 100;
+  padding-top: 3px 8px 3px 10px;
+}
+
+#noVNC_buttons input[type='button']:hover {
+  background: #E8E8E8;
+  -moz-box-shadow: inset 0px 0px 6px #636363;
+  -webkit-box-shadow: inset 0px 0px 6px #636363;
+  -o-box-shadow: inset 0px 0px 6px #636363;
+  box-shadow: inset 0px 0px 6px #636363;
+}
+
+#noVNC_buttons input[type='button']:focus {
+  outline: 0;
 }
 
 #noVNC_toggleExtraKeys_button { display: none; }

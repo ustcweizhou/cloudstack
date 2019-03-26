@@ -37,6 +37,10 @@
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="include/base.css" title="plain">
+    <script src="include/keymap.js"></script>
+    <script type="text/javascript">
+      window.addEventListener('load', function () { document.getElementById('noVNC_focus').focus(); } );
+    </script>
 
      <!--
     <script type='text/javascript'
@@ -47,27 +51,31 @@
 
 <body style="margin: 0px;">
     <div id="noVNC_container">
+            <input id="noVNC_focus" style="position:absolute; top:-1000px;"/>
             <div id="noVNC_status_bar" class="noVNC_status_bar" style="margin-top: 0px;">
-                <table border=0 width="100%"><tr>
-                    <td><div id="noVNC_status" style="position: relative; height: auto;">
-                        Loading
-                    </div></td>
-                    <td width="1%"><div id="noVNC_buttons">
-                        <input type=button value="Send CtrlAltDel"
-                            id="sendCtrlAltDelButton">
-                        <span id="noVNC_xvp_buttons">
-                        <input type=button value="Shutdown"
+                <div id="noVNC_logo"></div>
+                <div id="noVNC_buttons">
+                    <input type="button" value="Clipboard"
+                        id="clipboardButton">
+                    <input type="button" value="Send CtrlAltDel"
+                        id="sendCtrlAltDelButton">
+                    <span id="noVNC_xvp_buttons">
+                        <input type="button" value="Shutdown"
                             id="xvpShutdownButton">
-                        <input type=button value="Reboot"
+                        <input type="button" value="Reboot"
                             id="xvpRebootButton">
-                        <input type=button value="Reset"
+                        <input type="button" value="Reset"
                             id="xvpResetButton">
-                        </span>
-                            </div></td>
-                </tr></table>
+                    </span>
+                </div>
+                <div id="noVNC_status_container">
+                    <div id="noVNC_status" style="position: relative; height: auto;">
+                        Loading
+                    </div>
+                </div>
             </div>
             <canvas id="noVNC_canvas" width="640px" height="20px">
-                Canvas not supported.
+                <p style="color:white">This browser does not fully support required functionality, please use latest Chrome, Firefox or Internet Explorer 10. </p>
             </canvas>
         </div>
 
@@ -130,29 +138,32 @@
             return false;
         }
         function updateState(rfb, state, oldstate, msg) {
-            var s, sb, cad, level;
+            var s, sb, cad, clipboard, level;
             s = $D('noVNC_status');
             sb = $D('noVNC_status_bar');
             cad = $D('sendCtrlAltDelButton');
+            clipboard = $D('clipboardButton');
             switch (state) {
                 case 'failed':       level = "error";  break;
                 case 'fatal':        level = "error";  break;
                 case 'normal':       level = "normal"; break;
-                case 'disconnected': level = "normal"; break;
+                case 'disconnected': level = "warn";   break;
                 case 'loaded':       level = "normal"; break;
                 default:             level = "warn";   break;
             }
 
             if (state === "normal") {
                 cad.disabled = false;
+                clipboard.disabled = false;
             } else {
                 cad.disabled = true;
+                clipboard.disabled = true;
                 xvpInit(0);
             }
 
             if (typeof(msg) !== 'undefined') {
-                sb.setAttribute("class", "noVNC_status_" + level);
-                s.textContent = msg;
+                s.setAttribute("class", "noVNC_status_" + level);
+                s.innerHTML ='<span></span>'+ msg;
             }
         }
 
@@ -177,13 +188,22 @@
         }
 
         window.onscriptsload = function () {
-            var host, port, password, path, token;
+            var host, port, password, path, token, displayName;
 
             $D('sendCtrlAltDelButton').style.display = "inline";
-            $D('sendCtrlAltDelButton').onclick = sendCtrlAltDel;
+            $D('sendCtrlAltDelButton').onclick = function() {
+              if (confirm("Are you sure?"))
+                 sendCtrlAltDel();
+            };
             $D('xvpShutdownButton').onclick = xvpShutdown;
             $D('xvpRebootButton').onclick = xvpReboot;
             $D('xvpResetButton').onclick = xvpReset;
+
+            $D('clipboardButton').style.display = "inline";
+            $D('clipboardButton').onclick = function() {
+              rfb.sendString(prompt("Enter text to paste:"));
+              return false;
+            };
 
             WebUtil.init_logging(WebUtil.getConfigVar('logging', 'warn'));
             document.title = unescape(WebUtil.getConfigVar('title', 'noVNC'));
@@ -204,6 +224,7 @@
 
             password = WebUtil.getConfigVar('password', '');
             path = WebUtil.getConfigVar('path', 'websockify');
+            displayName = WebUtil.getConfigVar('displayName', '');
 
             // If a token variable is passed in, set the parameter in a cookie.
             // This is used by nova-novncproxy.
@@ -239,7 +260,7 @@
                 return; // don't continue trying to connect
             }
 
-            rfb.connect(host, port, password, path);
+            rfb.connect(host, port, password, path, displayName);
         };
         </script>
 

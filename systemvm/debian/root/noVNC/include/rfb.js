@@ -26,6 +26,7 @@ var RFB;
         this._rfb_port = 5900;
         this._rfb_password = '';
         this._rfb_path = '';
+        this._rfb_display_name = '';
 
         this._rfb_state = 'disconnected';
         this._rfb_version = 0;
@@ -230,11 +231,12 @@ var RFB;
 
     RFB.prototype = {
         // Public methods
-        connect: function (host, port, password, path) {
+        connect: function (host, port, password, path, display_name) {
             this._rfb_host = host;
             this._rfb_port = port;
             this._rfb_password = (password !== undefined) ? password : "";
             this._rfb_path = (path !== undefined) ? path : "";
+            this._rfb_display_name = (display_name !== undefined) ? display_name : "";
 
             if (!this._rfb_host || !this._rfb_port) {
                 return this._fail("Must set host and port");
@@ -254,6 +256,22 @@ var RFB;
             this._rfb_password = passwd;
             this._rfb_state = 'Authentication';
             setTimeout(this._init_msg.bind(this), 1);
+        },
+
+        sendString : function(str) {
+            if (this._rfb_state !== "normal" || this._view_only) { return false; }
+            Util.Info("Sending: "+str);
+            var arr = [];
+            for (var i = 0; i < str.length; i++ ) {
+                var char = str.substring(i, i + 1);
+                var code = char.charCodeAt(0);
+                if (shifted[char]) RFB.messages.keyEvent(this._sock, XK_Shift_L, 1); // Shift
+                RFB.messages.keyEvent(this._sock, code, 1); // (key)
+                RFB.messages.keyEvent(this._sock, code, 0); // (key)
+                if (shifted[char]) RFB.messages.keyEvent(this._sock, XK_Shift_L, 0); // Shift
+            }
+
+            this._sock.flush();
         },
 
         sendCtrlAltDel: function () {
@@ -993,9 +1011,9 @@ var RFB;
             this._sock.flush();
 
             if (this._encrypt) {
-                this._updateState('normal', 'Connected (encrypted) to: ' + this._fb_name);
+                this._updateState('normal', 'Connected (encrypted) to: ' + this._rfb_display_name);
             } else {
-                this._updateState('normal', 'Connected (unencrypted) to: ' + this._fb_name);
+                this._updateState('normal', 'Connected (unencrypted) to: ' + this._rfb_display_name);
             }
         },
 
