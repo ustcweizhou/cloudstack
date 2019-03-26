@@ -1,4 +1,6 @@
+from __future__ import print_function
 import os
+import sys
 
 class BasePlugin(object):
     def __init__(self, src):
@@ -24,11 +26,16 @@ class ReadOnlyTokenFile(BasePlugin):
             cfg_files = [self.source]
 
         self._targets = {}
+        index = 1
         for f in cfg_files:
             for line in [l.strip() for l in open(f).readlines()]:
                 if line and not line.startswith('#'):
-                    tok, target = line.split(': ')
-                    self._targets[tok] = target.strip().rsplit(':', 1)
+                    try:
+                        tok, target = line.split(': ')
+                        self._targets[tok] = target.strip().rsplit(':', 1)
+                    except ValueError:
+                        print >>sys.stderr, "Syntax error in %s on line %d" % (self.source, index)
+                index += 1
 
     def lookup(self, token):
         if self._targets is None:
@@ -81,3 +88,49 @@ class JSONTokenApi(BaseTokenAPI):
     def process_result(self, resp):
         resp_json = resp.json()
         return (resp_json['host'], resp_json['port'])
+
+
+class JWTTokenApi(BasePlugin):
+    # source is a JWT-token, with hostname and port included
+    # Both JWS as JWE tokens are accepted. With regards to JWE tokens, the key is re-used for both validation and decryption.
+
+    def lookup(self, token):
+        try:
+            from jwcrypto import jwt
+            import json
+
+            key = jwt.JWK()
+            
+            try:
+                with open(self.source, 'rb') as key_file:
+                    key_data = key_file.read()
+            except Exception as e:
+                print("Error loading key file: %s" % str(e), file=sys.stderr)
+                return None
+
+            try:
+                key.import_from_pem(key_data)
+            except:
+                try:
+                    key.import_key(k=key_data.decode('utf-8'),kty='oct')
+                except:
+                    print('Failed to correctly parse key data!', file=sys.stderr)
+                    return None
+
+            try:
+                token = jwt.JWT(key=key, jwt=token)
+                parsed_header = json.loads(token.header)
+
+                if 'enc' in parsed_header:
+                    # Token is encrypted, so we need to decrypt by passing the claims to a new instance
+                    token = jwt.JWT(key=key, jwt=token.claims)
+
+                parsed = json.loads(token.claims)
+
+                return (parsed['host'], parsed['port'])
+            except Exception as e:
+                print("Failed to parse token: %s" % str(e), file=sys.stderr)
+                return None
+        except ImportError as e:
+            print("package jwcrypto not found, are you sure you've installed it correctly?", file=sys.stderr)
+            return None

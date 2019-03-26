@@ -26,6 +26,9 @@ Sec-WebSocket-Protocol: %s\r\n\
 
 #define POLICY_RESPONSE "<cross-domain-policy><allow-access-from domain=\"*\" to-ports=\"*\" /></cross-domain-policy>\n"
 
+#define OPCODE_TEXT    0x01
+#define OPCODE_BINARY  0x02
+
 typedef struct {
     char path[1024+1];
     char host[1024+1];
@@ -44,6 +47,7 @@ typedef struct {
     SSL       *ssl;
     int        hixie;
     int        hybi;
+    int        opcode;
     headers_t *headers;
     char      *cin_buf;
     char      *cout_buf;
@@ -65,6 +69,8 @@ typedef struct {
 } settings_t;
 
 
+int resolve_host(struct in_addr *sin_addr, const char *hostname);
+
 ssize_t ws_recv(ws_ctx_t *ctx, void *buf, size_t len);
 
 ssize_t ws_send(ws_ctx_t *ctx, const void *buf, size_t len);
@@ -82,3 +88,17 @@ ssize_t ws_send(ws_ctx_t *ctx, const void *buf, size_t len);
 #define handler_msg(...) gen_handler_msg(stdout, __VA_ARGS__);
 #define handler_emsg(...) gen_handler_msg(stderr, __VA_ARGS__);
 
+void traffic(const char * token);
+
+int encode_hixie(u_char const *src, size_t srclength,
+                 char *target, size_t targsize);
+int decode_hixie(char *src, size_t srclength,
+                 u_char *target, size_t targsize,
+                 unsigned int *opcode, unsigned int *left);
+int encode_hybi(u_char const *src, size_t srclength,
+                char *target, size_t targsize, unsigned int opcode);
+int decode_hybi(unsigned char *src, size_t srclength,
+                u_char *target, size_t targsize,
+                unsigned int *opcode, unsigned int *left);
+
+void start_server();

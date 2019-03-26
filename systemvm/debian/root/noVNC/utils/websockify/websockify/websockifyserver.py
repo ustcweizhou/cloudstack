@@ -22,8 +22,11 @@ if sys.hexversion > 0x3000000:
     s2b = lambda s: s.encode('latin_1')
 else:
     s2b = lambda s: s      # No-op
-try:    from http.server import SimpleHTTPRequestHandler
-except: from SimpleHTTPServer import SimpleHTTPRequestHandler
+
+try:
+    from http.server import SimpleHTTPRequestHandler
+except ImportError:
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
 
 # Degraded functionality if these imports are missing
 for mod, msg in [('ssl', 'TLS/SSL/wss is disabled'),
@@ -37,9 +40,12 @@ for mod, msg in [('ssl', 'TLS/SSL/wss is disabled'),
 if sys.platform == 'win32':
     # make sockets pickle-able/inheritable
     import multiprocessing.reduction
+    # the multiprocesssing module behaves much differently on Windows,
+    # and we have yet to fix all the bugs
+    sys.exit("Windows is not supported at this time")
 
 from websockify.websocket import WebSocket, WebSocketWantReadError, WebSocketWantWriteError
-from websockify.websocketserver import WebSocketRequestHandler
+from websockify.websocketserver import WebSocketRequestHandlerMixIn
 
 class CompatibleWebSocket(WebSocket):
     def select_subprotocol(self, protocols):
@@ -50,7 +56,7 @@ class CompatibleWebSocket(WebSocket):
             return ''
 
 # HTTP handler with WebSocket upgrade support
-class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler):
+class WebSockifyRequestHandler(WebSocketRequestHandlerMixIn, SimpleHTTPRequestHandler):
     """
     WebSocket Request Handler Class, derived from SimpleHTTPRequestHandler.
     Must be sub-classed with new_websocket_client method definition.
@@ -86,12 +92,14 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
         self.handler_id = getattr(server, "handler_id", False)
         self.file_only = getattr(server, "file_only", False)
         self.traffic = getattr(server, "traffic", False)
+        self.web_auth = getattr(server, "web_auth", False)
+        self.host_token = getattr(server, "host_token", False)
 
         self.logger = getattr(server, "logger", None)
         if self.logger is None:
             self.logger = WebSockifyServer.get_logger()
 
-        WebSocketRequestHandler.__init__(self, req, addr, server)
+        SimpleHTTPRequestHandler.__init__(self, req, addr, server)
 
     def log_message(self, format, *args):
         self.logger.info("%s - - [%s] %s" % (self.address_string(), self.log_date_time_string(), format % args))
@@ -136,7 +144,9 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
         if bufs:
             for buf in bufs:
                 if self.rec:
-                    self.rec.write("%s,\n" % repr("{%s{" % tdelta + buf))
+                    # Python 3 compatible conversion
+                    bufstr = buf.decode('latin1').encode('unicode_escape').decode('ascii').replace("'", "\\'")
+                    self.rec.write("'{{{0}{{{1}',\n".format(tdelta, bufstr))
                 self.send_parts.append(buf)
 
         # Flush any previously queued data
@@ -175,7 +185,7 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
                 self.print_traffic("}.")
                 break
 
-            if len(buf) == 0:
+            if buf is None:
                 closed = {'code': self.request.close_code,
                           'reason': self.request.close_reason}
                 return bufs, closed
@@ -183,7 +193,9 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
             self.print_traffic("}")
 
             if self.rec:
-                self.rec.write("%s,\n" % repr("}%s}" % tdelta + buf))
+                # Python 3 compatible conversion
+                bufstr = buf.decode('latin1').encode('unicode_escape').decode('ascii').replace("'", "\\'")
+                self.rec.write("'}}{0}}}{1}',\n".format(tdelta, bufstr))
 
             bufs.append(buf)
 
@@ -196,19 +208,20 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
         """ Send a WebSocket orderly close frame. """
         self.request.shutdown(socket.SHUT_RDWR, code, reason)
 
-    def send_pong(self, data=''):
+    def send_pong(self, data=''.encode('ascii')):
         """ Send a WebSocket pong frame. """
         self.request.pong(data)
 
-    def send_ping(self, data=''):
+    def send_ping(self, data=''.encode('ascii')):
         """ Send a WebSocket ping frame. """
         self.request.ping(data)
 
     def handle_upgrade(self):
         # ensure connection is authorized, and determine the target
         self.validate_connection()
+        self.auth_connection()
 
-        WebSocketRequestHandler.handle_upgrade(self)
+        WebSocketRequestHandlerMixIn.handle_upgrade(self)
 
     def handle_websocket(self):
         # Indicate to server that a Websocket upgrade was done
@@ -253,6 +266,10 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
             self.send_close(exc.args[0], exc.args[1])
 
     def do_GET(self):
+        if self.web_auth:
+            # ensure connection is authorized, this seems to apply to list_directory() as well
+            self.auth_connection()
+
         if self.only_upgrade:
             self.send_error(405, "Method Not Allowed")
         else:
@@ -269,10 +286,17 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
         raise Exception("WebSocketRequestHandler.new_websocket_client() must be overloaded")
 
     def validate_connection(self):
-        """ Ensure that the connection is a valid connection, and set the target. """
+        """ Ensure that the connection has a valid token, and set the target. """
+        pass
+
+    def auth_connection(self):
+        """ Ensure that the connection is authorized. """
         pass
 
     def do_HEAD(self):
+        if self.web_auth:
+            self.auth_connection()
+
         if self.only_upgrade:
             self.send_error(405, "Method Not Allowed")
         else:
@@ -282,6 +306,7 @@ class WebSockifyRequestHandler(WebSocketRequestHandler, SimpleHTTPRequestHandler
         if self.rec:
             self.rec.write("'EOF'];\n")
             self.rec.close()
+        SimpleHTTPRequestHandler.finish(self)
 
     def handle(self):
         # When using run_once, we have a single process, so
@@ -313,32 +338,39 @@ class WebSockifyServer(object):
     class Terminate(Exception):
         pass
 
-    def __init__(self, RequestHandlerClass, listen_host='',
-                 listen_port=None, source_is_ipv6=False,
-            verbose=False, cert='', key='', ssl_only=None,
-            daemon=False, record='', web='',
+    def __init__(self, RequestHandlerClass, listen_fd=None,
+            listen_host='', listen_port=None, source_is_ipv6=False,
+            verbose=False, cert='', key='', key_password=None, ssl_only=None,
+            verify_client=False, cafile=None,
+            daemon=False, record='', web='', web_auth=False,
             file_only=False,
             run_once=False, timeout=0, idle_timeout=0, traffic=False,
             tcp_keepalive=True, tcp_keepcnt=None, tcp_keepidle=None,
-            tcp_keepintvl=None):
+            tcp_keepintvl=None, ssl_ciphers=None, ssl_options=0):
 
         # settings
         self.RequestHandlerClass = RequestHandlerClass
         self.verbose        = verbose
+        self.listen_fd      = listen_fd
         self.listen_host    = listen_host
         self.listen_port    = listen_port
         self.prefer_ipv6    = source_is_ipv6
         self.ssl_only       = ssl_only
+        self.ssl_ciphers    = ssl_ciphers
+        self.ssl_options    = ssl_options
+        self.verify_client  = verify_client
         self.daemon         = daemon
         self.run_once       = run_once
         self.timeout        = timeout
         self.idle_timeout   = idle_timeout
         self.traffic        = traffic
         self.file_only      = file_only
+        self.web_auth       = web_auth
 
         self.launch_time    = time.time()
         self.ws_connection  = False
         self.handler_id     = 1
+        self.terminating    = False
 
         self.logger         = self.get_logger()
         self.tcp_keepalive  = tcp_keepalive
@@ -346,15 +378,21 @@ class WebSockifyServer(object):
         self.tcp_keepidle   = tcp_keepidle
         self.tcp_keepintvl  = tcp_keepintvl
 
+        # keyfile path must be None if not specified
+        self.key = None
+        self.key_password = key_password
+
         # Make paths settings absolute
         self.cert = os.path.abspath(cert)
-        self.key = self.web = self.record = ''
+        self.web = self.record = self.cafile = ''
         if key:
             self.key = os.path.abspath(key)
         if web:
             self.web = os.path.abspath(web)
         if record:
             self.record = os.path.abspath(record)
+        if cafile:
+            self.cafile = os.path.abspath(cafile)
 
         if self.web:
             os.chdir(self.web)
@@ -368,8 +406,11 @@ class WebSockifyServer(object):
 
         # Show configuration
         self.msg("WebSocket server settings:")
-        self.msg("  - Listen on %s:%s",
-                self.listen_host, self.listen_port)
+        if self.listen_fd != None:
+            self.msg("  - Listen for inetd connections")
+        else:
+            self.msg("  - Listen on %s:%s",
+                    self.listen_host, self.listen_port)
         if self.web:
             if self.file_only:
                 self.msg("  - Web server (no directory listings). Web root: %s", self.web)
@@ -511,16 +552,15 @@ class WebSockifyServer(object):
         """
         ready = select.select([sock], [], [], 3)[0]
 
-
         if not ready:
-            raise self.EClose("ignoring socket not ready")
+            raise self.EClose("")
         # Peek, but do not read the data so that we have a opportunity
         # to SSL wrap the socket first
         handshake = sock.recv(1024, socket.MSG_PEEK)
         #self.msg("Handshake [%s]" % handshake)
 
         if not handshake:
-            raise self.EClose("ignoring empty handshake")
+            raise self.EClose("")
 
         elif handshake[0] in ("\x16", "\x80", 22, 128):
             # SSL wrap the connection
@@ -531,11 +571,32 @@ class WebSockifyServer(object):
                                   % self.cert)
             retsock = None
             try:
-                retsock = ssl.wrap_socket(
-                        sock,
-                        server_side=True,
-                        certfile=self.cert,
-                        keyfile=self.key)
+                if (hasattr(ssl, 'create_default_context') 
+                    and callable(ssl.create_default_context)):
+                    # create new-style SSL wrapping for extended features
+                    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                    if self.ssl_ciphers is not None:
+                        context.set_ciphers(self.ssl_ciphers)
+                    context.options = self.ssl_options
+                    context.load_cert_chain(certfile=self.cert, keyfile=self.key, password=self.key_password)
+                    if self.verify_client:
+                        context.verify_mode = ssl.CERT_REQUIRED
+                        if self.cafile:
+                            context.load_verify_locations(cafile=self.cafile)
+                        else:
+                            context.set_default_verify_paths()
+                    retsock = context.wrap_socket(
+                            sock,
+                            server_side=True)
+                else:
+                    if self.verify_client:
+                        raise self.EClose("Client certificate verification requested, but this Python is too old.")
+                    # new-style SSL wrapping is not needed, using to old style
+                    retsock = ssl.wrap_socket(
+                            sock,
+                            server_side=True,
+                            certfile=self.cert,
+                            keyfile=self.key)
             except ssl.SSLError:
                 _, x, _ = sys.exc_info()
                 if x.args[0] == ssl.SSL_ERROR_EOF:
@@ -593,7 +654,9 @@ class WebSockifyServer(object):
         pass
 
     def terminate(self):
-        raise self.Terminate()
+        if not self.terminating:
+            self.terminating = True
+            raise self.Terminate()
 
     def multiprocessing_SIGCHLD(self, sig, stack):
         # TODO: figure out a way to actually log this information without
@@ -666,12 +729,20 @@ class WebSockifyServer(object):
         is a WebSockets client then call new_websocket_client() method (which must
         be overridden) for each new client connection.
         """
-        lsock = self.socket(self.listen_host, self.listen_port, False,
-                            self.prefer_ipv6,
-                            tcp_keepalive=self.tcp_keepalive,
-                            tcp_keepcnt=self.tcp_keepcnt,
-                            tcp_keepidle=self.tcp_keepidle,
-                            tcp_keepintvl=self.tcp_keepintvl)
+
+        if self.listen_fd != None:
+            lsock = socket.fromfd(self.listen_fd, socket.AF_INET, socket.SOCK_STREAM)
+            if sys.hexversion < 0x3000000:
+                # For python 2 we have to wrap the "raw" socket into a socket object,
+                # otherwise ssl wrap_socket doesn't work.
+                lsock = socket.socket(_sock=lsock)
+        else:
+            lsock = self.socket(self.listen_host, self.listen_port, False,
+                                self.prefer_ipv6,
+                                tcp_keepalive=self.tcp_keepalive,
+                                tcp_keepcnt=self.tcp_keepcnt,
+                                tcp_keepidle=self.tcp_keepidle,
+                                tcp_keepintvl=self.tcp_keepintvl)
 
         if self.daemon:
             keepfd = self.get_log_fd()
@@ -684,13 +755,15 @@ class WebSockifyServer(object):
         original_signals = {
             signal.SIGINT: signal.getsignal(signal.SIGINT),
             signal.SIGTERM: signal.getsignal(signal.SIGTERM),
-            signal.SIGCHLD: signal.getsignal(signal.SIGCHLD),
         }
+        if getattr(signal, 'SIGCHLD', None) is not None:
+            original_signals[signal.SIGCHLD] = signal.getsignal(signal.SIGCHLD)
         signal.signal(signal.SIGINT, self.do_SIGINT)
         signal.signal(signal.SIGTERM, self.do_SIGTERM)
         # make sure that _cleanup is called when children die
         # by calling active_children on SIGCHLD
-        signal.signal(signal.SIGCHLD, self.multiprocessing_SIGCHLD)
+        if getattr(signal, 'SIGCHLD', None) is not None:
+            signal.signal(signal.SIGCHLD, self.multiprocessing_SIGCHLD)
 
         last_active_time = self.launch_time
         try:

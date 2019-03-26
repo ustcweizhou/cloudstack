@@ -11,11 +11,13 @@
 #include <errno.h>
 #include <limits.h>
 #include <getopt.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/select.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include "websocket.h"
 
@@ -35,6 +37,7 @@ char USAGE[] = "Usage: [options] " \
                "[source_addr:]source_port target_addr:target_port\n\n" \
                "  --verbose|-v       verbose messages and per frame traffic\n" \
                "  --daemon|-D        become a daemon (background process)\n" \
+               "  --run-once         handle a single WebSocket connection and exit\n" \
                "  --cert CERT        SSL certificate file\n" \
                "  --key KEY          SSL key file (if separate from cert)\n" \
                "  --ssl-only         disallow non-encrypted connections";
@@ -47,7 +50,7 @@ char USAGE[] = "Usage: [options] " \
 char target_host[256];
 int target_port;
 
-extern pipe_error;
+extern int pipe_error;
 extern settings_t settings;
 
 void do_proxy(ws_ctx_t *ws_ctx, int target) {
@@ -155,7 +158,7 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             cout_start = 0;
             if (ws_ctx->hybi) {
                 cout_end = encode_hybi(ws_ctx->cin_buf, bytes,
-                                   ws_ctx->cout_buf, BUFSIZE, 1);
+                                   ws_ctx->cout_buf, BUFSIZE, ws_ctx->opcode);
             } else {
                 cout_end = encode_hixie(ws_ctx->cin_buf, bytes,
                                     ws_ctx->cout_buf, BUFSIZE);
@@ -202,7 +205,7 @@ void do_proxy(ws_ctx_t *ws_ctx, int target) {
             }
 
             if (opcode == 8) {
-                handler_emsg("client sent orderly close frame\n");
+                handler_msg("client sent orderly close frame\n");
                 break;
             }
 

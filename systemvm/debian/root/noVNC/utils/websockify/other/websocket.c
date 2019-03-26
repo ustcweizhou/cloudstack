@@ -11,9 +11,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <strings.h>
+#include <string.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -21,7 +22,7 @@
 #include <fcntl.h>  // daemonizing
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#include <resolv.h>      /* base64 encode/decode */
+#include <openssl/bio.h> /* base64 encode/decode */
 #include <openssl/md5.h> /* md5 hash */
 #include <openssl/sha.h> /* sha1 hash */
 #include "websocket.h"
@@ -36,7 +37,7 @@ int pipe_error = 0;
 settings_t settings;
 
 
-void traffic(char * token) {
+void traffic(const char * token) {
     if ((settings.verbose) && (! settings.daemon)) {
         fprintf(stdout, "%s", token);
         fflush(stdout);
@@ -120,7 +121,7 @@ ws_ctx_t *alloc_ws_ctx() {
     return ctx;
 }
 
-int free_ws_ctx(ws_ctx_t *ctx) {
+void free_ws_ctx(ws_ctx_t *ctx) {
     free(ctx->cin_buf);
     free(ctx->cout_buf);
     free(ctx->tin_buf);
@@ -130,6 +131,7 @@ int free_ws_ctx(ws_ctx_t *ctx) {
 
 ws_ctx_t *ws_socket(ws_ctx_t *ctx, int socket) {
     ctx->sockfd = socket;
+    return ctx;
 }
 
 ws_ctx_t *ws_socket_ssl(ws_ctx_t *ctx, int socket, char * certfile, char * keyfile) {
@@ -167,8 +169,7 @@ ws_ctx_t *ws_socket_ssl(ws_ctx_t *ctx, int socket, char * certfile, char * keyfi
         fatal(msg);
     }
 
-    if (SSL_CTX_use_certificate_file(ctx->ssl_ctx, certfile,
-                                     SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, certfile) <= 0) {
         sprintf(msg, "Unable to load certificate file %s\n", certfile);
         fatal(msg);
     }
@@ -191,7 +192,7 @@ ws_ctx_t *ws_socket_ssl(ws_ctx_t *ctx, int socket, char * certfile, char * keyfi
     return ctx;
 }
 
-int ws_socket_free(ws_ctx_t *ctx) {
+void ws_socket_free(ws_ctx_t *ctx) {
     if (ctx->ssl) {
         SSL_free(ctx->ssl);
         ctx->ssl = NULL;
@@ -207,6 +208,72 @@ int ws_socket_free(ws_ctx_t *ctx) {
     }
 }
 
+int ws_b64_ntop(const unsigned char const * src, size_t srclen, char * dst, size_t dstlen) {
+    int len = 0;
+    int total_len = 0;
+
+    BIO *buff, *b64f;
+    BUF_MEM *ptr;
+
+    b64f = BIO_new(BIO_f_base64());
+    buff = BIO_new(BIO_s_mem());
+    buff = BIO_push(b64f, buff);
+
+    BIO_set_flags(buff, BIO_FLAGS_BASE64_NO_NL);
+    BIO_set_close(buff, BIO_CLOSE);
+    do {
+        len = BIO_write(buff, src + total_len, srclen - total_len);
+        if (len > 0)
+            total_len += len;
+    } while (len && BIO_should_retry(buff));
+
+    BIO_flush(buff);
+
+    BIO_get_mem_ptr(buff, &ptr);
+    len = ptr->length;
+
+    memcpy(dst, ptr->data, dstlen < len ? dstlen : len);
+    dst[dstlen < len ? dstlen : len] = '\0';
+
+    BIO_free_all(buff);
+
+    if (dstlen < len)
+        return -1;
+
+    return len;
+}
+
+int ws_b64_pton(const char const * src, unsigned char * dst, size_t dstlen) {
+    int len = 0;
+    int total_len = 0;
+    int pending = 0;
+
+    BIO *buff, *b64f;
+
+    b64f = BIO_new(BIO_f_base64());
+    buff = BIO_new_mem_buf(src, -1);
+    buff = BIO_push(b64f, buff);
+
+    BIO_set_flags(buff, BIO_FLAGS_BASE64_NO_NL);
+    BIO_set_close(buff, BIO_CLOSE);
+    do {
+        len = BIO_read(buff, dst + total_len, dstlen - total_len);
+        if (len > 0)
+            total_len += len;
+    } while (len && BIO_should_retry(buff));
+
+    dst[total_len] = '\0';
+
+    pending = BIO_ctrl_pending(buff);
+
+    BIO_free_all(buff);
+
+    if (pending)
+        return -1;
+
+    return len;
+}
+
 /* ------------------------------------------------------- */
 
 
@@ -214,7 +281,7 @@ int encode_hixie(u_char const *src, size_t srclength,
                  char *target, size_t targsize) {
     int sz = 0, len = 0;
     target[sz++] = '\x00';
-    len = b64_ntop(src, srclength, target+sz, targsize-sz);
+    len = ws_b64_ntop(src, srclength, target+sz, targsize-sz);
     if (len < 0) {
         return len;
     }
@@ -249,7 +316,7 @@ int decode_hixie(char *src, size_t srclength,
         /* We may have more than one frame */
         end = (char *)memchr(start, '\xff', srclength);
         *end = '\x00';
-        len = b64_pton(start, target+retlen, targsize-retlen);
+        len = ws_b64_pton(start, target+retlen, targsize-retlen);
         if (len < 0) {
             return len;
         }
@@ -268,23 +335,32 @@ int decode_hixie(char *src, size_t srclength,
 int encode_hybi(u_char const *src, size_t srclength,
                 char *target, size_t targsize, unsigned int opcode)
 {
-    unsigned long long b64_sz, len_offset = 1, payload_offset = 2, len = 0;
-    
-    if ((int)srclength <= 0)
-    {
+    unsigned long long payload_offset = 2;
+    int len = 0;
+
+    if (opcode != OPCODE_TEXT && opcode != OPCODE_BINARY) {
+        handler_emsg("Invalid opcode. Opcode must be 0x01 for text mode, or 0x02 for binary mode.\n");
+        return -1;
+    }
+
+    target[0] = (char)((opcode & 0x0F) | 0x80);
+
+    if ((int)srclength <= 0) {
         return 0;
     }
 
-    b64_sz = ((srclength - 1) / 3) * 4 + 4;
+    if (opcode & OPCODE_TEXT) {
+        len = ((srclength - 1) / 3) * 4 + 4;
+    } else {
+        len = srclength;
+    }
 
-    target[0] = (char)(opcode & 0x0F | 0x80);
-
-    if (b64_sz <= 125) {
-        target[1] = (char) b64_sz;
+    if (len <= 125) {
+        target[1] = (char) len;
         payload_offset = 2;
-    } else if ((b64_sz > 125) && (b64_sz < 65536)) {
+    } else if ((len > 125) && (len < 65536)) {
         target[1] = (char) 126;
-        *(u_short*)&(target[2]) = htons(b64_sz);
+        *(u_short*)&(target[2]) = htons(len);
         payload_offset = 4;
     } else {
         handler_emsg("Sending frames larger than 65535 bytes not supported\n");
@@ -294,8 +370,13 @@ int encode_hybi(u_char const *src, size_t srclength,
         //payload_offset = 10;
     }
 
-    len = b64_ntop(src, srclength, target+payload_offset, targsize-payload_offset);
-    
+    if (opcode & OPCODE_TEXT) {
+        len = ws_b64_ntop(src, srclength, target+payload_offset, targsize-payload_offset);
+    } else {
+        memcpy(target+payload_offset, src, srclength);
+        len = srclength;
+    }
+
     if (len < 0) {
         return len;
     }
@@ -307,7 +388,8 @@ int decode_hybi(unsigned char *src, size_t srclength,
                 u_char *target, size_t targsize,
                 unsigned int *opcode, unsigned int *left)
 {
-    unsigned char *frame, *mask, *payload, save_char, cntstr[4];;
+    unsigned char *frame, *mask, *payload, save_char;
+    char cntstr[4];
     int masked = 0;
     int i = 0, len, framecount = 0;
     size_t remaining;
@@ -364,7 +446,7 @@ int decode_hybi(unsigned char *src, size_t srclength,
         //printf("    payload_length: %u, raw remaining: %u\n", payload_length, remaining);
         payload = frame + hdr_length + 4*masked;
 
-        if (*opcode != 1 && *opcode != 2) {
+        if (*opcode != OPCODE_TEXT && *opcode != OPCODE_BINARY) {
             handler_msg("Ignoring non-data frame, opcode 0x%x\n", *opcode);
             continue;
         }
@@ -389,8 +471,13 @@ int decode_hybi(unsigned char *src, size_t srclength,
             payload[i] ^= mask[i%4];
         }
 
-        // base64 decode the data
-        len = b64_pton((const char*)payload, target+target_offset, targsize);
+        if (*opcode & OPCODE_TEXT) {
+            // base64 decode the data
+            len = ws_b64_pton((const char*)payload, target+target_offset, targsize);
+        } else {
+            memcpy(target+target_offset, payload, payload_length);
+            len = payload_length;
+        }
 
         // Restore the first character of the next frame
         payload[payload_length] = save_char;
@@ -560,7 +647,7 @@ static void gen_sha1(headers_t *headers, char *target) {
     SHA1_Update(&c, HYBI_GUID, 36);
     SHA1_Final(hash, &c);
 
-    r = b64_ntop(hash, sizeof hash, target, HYBI10_ACCEPTHDRLEN);
+    r = ws_b64_ntop(hash, sizeof hash, target, HYBI10_ACCEPTHDRLEN);
     //assert(r == HYBI10_ACCEPTHDRLEN - 1);
 }
 
@@ -571,6 +658,7 @@ ws_ctx_t *do_handshake(int sock) {
     headers_t *headers;
     int len, ret, i, offset;
     ws_ctx_t * ws_ctx;
+    char *response_protocol;
 
     // Peek, but don't read the data
     len = recv(sock, handshake, 1024, MSG_PEEK);
@@ -640,10 +728,21 @@ ws_ctx_t *do_handshake(int sock) {
     }
 
     headers = ws_ctx->headers;
+
+    response_protocol = strtok(headers->protocols, ",");
+    if (!response_protocol || !strlen(response_protocol)) {
+        ws_ctx->opcode = OPCODE_BINARY;
+        response_protocol = "null";
+    } else if (!strcmp(response_protocol, "base64")) {
+      ws_ctx->opcode = OPCODE_TEXT;
+    } else {
+        ws_ctx->opcode = OPCODE_BINARY;
+    }
+
     if (ws_ctx->hybi > 0) {
         handler_msg("using protocol HyBi/IETF 6455 %d\n", ws_ctx->hybi);
         gen_sha1(headers, sha1);
-        sprintf(response, SERVER_HANDSHAKE_HYBI, sha1, "base64");
+        snprintf(response, sizeof(response), SERVER_HANDSHAKE_HYBI, sha1, response_protocol);
     } else {
         if (ws_ctx->hixie == 76) {
             handler_msg("using protocol Hixie 76\n");
@@ -654,8 +753,8 @@ ws_ctx_t *do_handshake(int sock) {
             trailer[0] = '\0';
             pre = "";
         }
-        sprintf(response, SERVER_HANDSHAKE_HIXIE, pre, headers->origin, pre, scheme,
-                headers->host, headers->path, pre, "base64", trailer);
+        snprintf(response, sizeof(response), SERVER_HANDSHAKE_HIXIE, pre, headers->origin,
+                 pre, scheme, headers->host, headers->path, pre, "base64", trailer);
     }
     
     //handler_msg("response: %s\n", response);
@@ -664,7 +763,7 @@ ws_ctx_t *do_handshake(int sock) {
     return ws_ctx;
 }
 
-void signal_handler(sig) {
+void signal_handler(int sig) {
     switch (sig) {
         case SIGHUP: break; // ignore for now
         case SIGPIPE: pipe_error = 1; break; // handle inline
@@ -708,8 +807,9 @@ void daemonize(int keepfd) {
 
 
 void start_server() {
-    int lsock, csock, pid, clilen, sopt = 1, i;
+    int lsock, csock, pid, sopt = 1, i;
     struct sockaddr_in serv_addr, cli_addr;
+    socklen_t clilen;
     ws_ctx_t *ws_ctx;
 
 
@@ -791,6 +891,7 @@ void start_server() {
             break;   // Child process exits
         } else {         // parent process
             settings.handler_id += 1;
+            close(csock);
         }
     }
     if (pid == 0) {

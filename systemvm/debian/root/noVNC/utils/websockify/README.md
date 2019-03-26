@@ -109,6 +109,20 @@ These are not necessary for the basic operation.
   This functionality is activated with the `--log-file FILE` option
   where FILE is the file where the logs should be saved.
 
+* Authentication plugins: websockify can demand authentication for
+  websocket connections and, if you use `--web-auth`, also for normal
+  web requests. This functionality is activated with the
+  `--auth-plugin CLASS` and `--auth-source ARG` options, where CLASS is
+  usually one from auth_plugins.py and ARG is the plugin's configuration.
+
+* Token plugins: a single instance of websockify can connect clients to
+  multiple different pre-configured targets, depending on the token sent
+  by the client using the `token` URL parameter, or the hostname used to
+  reach websockify, if you use `--host-token`. This functionality is
+  activated with the `--token-plugin CLASS` and `--token-source ARG`
+  options, where CLASS is usually one from token_plugins.py and ARG is
+  the plugin's configuration.
+
 ### Implementations of websockify
 
 The primary implementation of websockify is in python. There are
@@ -160,6 +174,20 @@ client (use 'localhost' and '2023' for the host and port
 respectively).
 
 
+### Installing the Python implementation of websockify
+
+Download one of the releases or the latest development version, extract
+it and run `python setup.py install` as root in the directory where you
+extracted the files. Normally, this will also install numpy for better
+performance, if you don't have it installed already. However, numpy is
+optional. If you don't want to install numpy or if you can't compile it,
+you can edit setup.py and remove the `install_requires=['numpy'],` line
+before running `python setup.py install`.
+
+Afterwards, websockify should be available in your path. Run
+`websockify --help` to confirm it's installed correctly.
+
+
 ### Building the Python ssl module (for python 2.5 and older)
 
 * Install the build dependencies. On Ubuntu use this command:
@@ -180,4 +208,3 @@ respectively).
     `cd ../`
 
     `ln -sf ssl-1.15/build/lib.linux-*/ssl ssl`
-
