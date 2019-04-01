@@ -173,11 +173,14 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
     @attr(tags=["advanced"], required_hardware="false")
     def test_02_created_shared_guest_network(self):
         """
-        Try to create a shared guest network using one of the physical network created earlier.
-        Creation should fail since there are more than 1 physical network without tags
+        1. Create new physical network
+        2. Update the network with tags and traffic type "Guest"
+        3. Create a network offering and shared network based on the above physical network
+        4. Create a virtual machine using the above created network
+        4. Ensure that the traffic type is Guest and vlan is same as the shared network
         :return:
         """
-        # Create a physical network
+        #1. Create a physical network
         self.physical_network_3 = PhysicalNetwork.create(
             self.apiclient,
             self.services["l2-network"],
@@ -191,7 +194,7 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
             state="Enabled"
         )
 
-        # try adding traffic type Guest
+        #2. try adding traffic type Guest
         self.physical_network_3.addTrafficType(
             self.apiclient,
             type="Guest"
@@ -209,6 +212,7 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
             state='Enabled'
         )
 
+        #3. Create a shared network
         self.shared_network = Network.create(
             self.apiclient,
             self.services["network2"],
@@ -224,6 +228,7 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
             self.testdata["service_offerings"]["small"]
         )
 
+        #4. Create virtual machine
         self.testdata["virtual_machine"]["zoneid"] = self.zone.id
         self.testdata["virtual_machine"]["template"] = self.template.id
         self.virtual_machine = VirtualMachine.create(
