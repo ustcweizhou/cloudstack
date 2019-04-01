@@ -20,10 +20,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
 
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.ConfigKey.Scope;
 import org.apache.cloudstack.framework.config.ScopedConfigStorage;
+import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
+
+import com.cloud.domain.DomainDetailVO;
+import com.cloud.domain.DomainVO;
+import com.cloud.domain.dao.DomainDetailsDao;
+import com.cloud.domain.dao.DomainDao;
+import com.cloud.user.dao.AccountDao;
 
 import com.cloud.utils.db.GenericDaoBase;
 import com.cloud.utils.db.QueryBuilder;
@@ -34,6 +42,15 @@ import com.cloud.utils.db.TransactionLegacy;
 
 public class AccountDetailsDaoImpl extends GenericDaoBase<AccountDetailVO, Long> implements AccountDetailsDao, ScopedConfigStorage {
     protected final SearchBuilder<AccountDetailVO> accountSearch;
+
+    @Inject
+    private ConfigurationDao _configDao;
+    @Inject
+    protected AccountDao _accountDao;
+    @Inject
+    protected DomainDao _domainDao;
+    @Inject
+    protected DomainDetailsDao _domainDetailsDao;
 
     protected AccountDetailsDaoImpl() {
         accountSearch = createSearchBuilder();
@@ -100,6 +117,27 @@ public class AccountDetailsDaoImpl extends GenericDaoBase<AccountDetailVO, Long>
     @Override
     public String getConfigValue(long id, ConfigKey<?> key) {
         AccountDetailVO vo = findDetail(id, key.key());
-        return vo == null ? null : vo.getValue();
+        String value = vo == null ? null : vo.getValue();
+        if (value != null) {
+            return value;
+        }
+        String enableAccountSettingsForDomain = _configDao.getValue("enable.account.settings.for.domain");
+        if (enableAccountSettingsForDomain == null || ! Boolean.parseBoolean(enableAccountSettingsForDomain)) {
+            return value;
+        }
+        AccountVO account = _accountDao.findById(id);
+        DomainVO domain = _domainDao.findById(account.getDomainId());
+        while (domain != null) {
+            DomainDetailVO domainVO = _domainDetailsDao.findDetail(domain.getId(), key.key());
+            if (domainVO != null) {
+                value = domainVO.getValue();
+                break;
+            } else if (domain.getParent() != null) {
+                domain = _domainDao.findById(domain.getParent());
+            } else {
+                break;
+            }
+        }
+        return value;
     }
 }

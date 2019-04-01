@@ -16,12 +16,11 @@
 // under the License.
 package org.apache.cloudstack.framework.config;
 
-import java.sql.Date;
-
+import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.framework.config.impl.ConfigDepotImpl;
 import org.apache.cloudstack.framework.config.impl.ConfigurationVO;
 
-import com.cloud.utils.exception.CloudRuntimeException;
+import java.sql.Date;
 
 /**
  * ConfigKey supplants the original Config.java.  It is just a class
@@ -31,7 +30,7 @@ import com.cloud.utils.exception.CloudRuntimeException;
 public class ConfigKey<T> {
 
     public static enum Scope {
-        Global, Zone, Cluster, StoragePool, Account, ManagementServer, ImageStore, Domain
+        Global, Zone, Cluster, StoragePool, Account, ManagementServer, ImageStore, Domain, Network, Vpc
     }
 
     private final String _category;
@@ -153,6 +152,19 @@ public class ConfigKey<T> {
         }
 
         String value = s_depot != null ? s_depot.scoped(this).getConfigValue(id, this) : null;
+        if (value == null) {
+            return value();
+        } else {
+            return valueOf(value);
+        }
+    }
+
+    public T valueInDomain(Long domainId) {
+        if (domainId == null) {
+            return value();
+        }
+
+        String value = s_depot != null ? s_depot.getDomainScope(this).getConfigValue(domainId, this) : null;
         if (value == null) {
             return value();
         } else {

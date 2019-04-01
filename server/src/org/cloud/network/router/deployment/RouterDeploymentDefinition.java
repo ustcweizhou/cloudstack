@@ -16,16 +16,6 @@
 // under the License.
 package org.cloud.network.router.deployment;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import com.cloud.network.dao.NetworkDetailVO;
-import com.cloud.network.dao.NetworkDetailsDao;
-import com.cloud.network.router.VirtualRouter;
-import org.apache.cloudstack.engine.orchestration.service.NetworkOrchestrationService;
-import org.apache.log4j.Logger;
-
 import com.cloud.configuration.ConfigurationManagerImpl;
 import com.cloud.dc.DataCenter.NetworkType;
 import com.cloud.dc.HostPodVO;
@@ -50,10 +40,14 @@ import com.cloud.network.VirtualRouterProvider.Type;
 import com.cloud.network.addr.PublicIp;
 import com.cloud.network.dao.IPAddressDao;
 import com.cloud.network.dao.NetworkDao;
+import com.cloud.network.dao.NetworkDetailVO;
+import com.cloud.network.dao.NetworkDetailsDao;
 import com.cloud.network.dao.PhysicalNetworkServiceProviderDao;
 import com.cloud.network.dao.UserIpv6AddressDao;
 import com.cloud.network.dao.VirtualRouterProviderDao;
 import com.cloud.network.router.NetworkHelper;
+import com.cloud.network.router.VirtualNetworkApplianceManager;
+import com.cloud.network.router.VirtualRouter;
 import com.cloud.network.router.VirtualRouter.Role;
 import com.cloud.network.vpc.Vpc;
 import com.cloud.offering.ServiceOffering;
@@ -74,6 +68,12 @@ import com.cloud.vm.VirtualMachineProfile.Param;
 import com.cloud.vm.dao.DomainRouterDao;
 import com.cloud.vm.dao.NicDao;
 import com.cloud.vm.dao.VMInstanceDao;
+import org.apache.cloudstack.engine.orchestration.service.NetworkOrchestrationService;
+import org.apache.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class RouterDeploymentDefinition {
     private static final Logger logger = Logger.getLogger(RouterDeploymentDefinition.class);
@@ -389,8 +389,42 @@ public class RouterDeploymentDefinition {
         serviceOfferingId = serviceOffering.getId();
     }
 
+    protected void findAccountServiceOfferingId() {
+        String accountRouterOffering = VirtualNetworkApplianceManager.VirtualRouterServiceOffering.valueIn(guestNetwork.getAccountId());
+        if (accountRouterOffering != null) {
+            ServiceOfferingVO serviceOffering = serviceOfferingDao.findByUuid(accountRouterOffering);
+            if (serviceOffering != null) {
+                boolean isLocalStorage = ConfigurationManagerImpl.SystemVMUseLocalStorage.valueIn(dest.getDataCenter().getId());
+                if (isLocalStorage == serviceOffering.getUseLocalStorage()) {
+                    serviceOfferingId = serviceOffering.getId();
+                }
+            }
+        }
+    }
+
+    protected void findNetworkServiceOfferingId() {
+        String networkRouterOffering = VirtualNetworkApplianceManager.NetworkVirtualRouterServiceOffering.valueIn(guestNetwork.getId());
+        if (networkRouterOffering != null) {
+            ServiceOfferingVO serviceOffering = serviceOfferingDao.findByUuid(networkRouterOffering);
+            if (serviceOffering != null) {
+                boolean isLocalStorage = ConfigurationManagerImpl.SystemVMUseLocalStorage.valueIn(dest.getDataCenter().getId());
+                if (isLocalStorage == serviceOffering.getUseLocalStorage()) {
+                    serviceOfferingId = serviceOffering.getId();
+                }
+            }
+        }
+    }
+
     protected void findServiceOfferingId() {
-        serviceOfferingId = networkOfferingDao.findById(guestNetwork.getNetworkOfferingId()).getServiceOfferingId();
+        if (serviceOfferingId == null) {
+            findNetworkServiceOfferingId();
+        }
+        if (serviceOfferingId == null) {
+            findAccountServiceOfferingId();
+        }
+        if (serviceOfferingId == null) {
+            serviceOfferingId = networkOfferingDao.findById(guestNetwork.getNetworkOfferingId()).getServiceOfferingId();
+        }
         if (serviceOfferingId == null) {
             findDefaultServiceOfferingId();
         }

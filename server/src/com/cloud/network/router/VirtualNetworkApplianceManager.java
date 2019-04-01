@@ -16,10 +16,6 @@
 // under the License.
 package com.cloud.network.router;
 
-import java.util.List;
-
-import org.apache.cloudstack.framework.config.ConfigKey;
-
 import com.cloud.exception.AgentUnavailableException;
 import com.cloud.exception.ConcurrentOperationException;
 import com.cloud.exception.ResourceUnavailableException;
@@ -30,6 +26,9 @@ import com.cloud.user.Account;
 import com.cloud.user.User;
 import com.cloud.utils.component.Manager;
 import com.cloud.vm.DomainRouterVO;
+import org.apache.cloudstack.framework.config.ConfigKey;
+
+import java.util.List;
 
 /**
  * NetworkManager manages the network for the different end users.
@@ -44,6 +43,9 @@ public interface VirtualNetworkApplianceManager extends Manager, VirtualNetworkA
     static final String RouterTemplateOvm3CK = "router.template.ovm3";
     static final String SetServiceMonitorCK = "network.router.EnableServiceMonitoring";
     static final String RouterAlertsCheckIntervalCK = "router.alerts.check.interval";
+    static final String VirtualRouterServiceOfferingCK = "router.service.offering";
+    static final String NetworkVirtualRouterServiceOfferingCK = "network.router.service.offering";
+    static final String VpcVirtualRouterServiceOfferingCK = "vpc.router.service.offering";
 
     static final ConfigKey<String> RouterTemplateXen = new ConfigKey<String>(String.class, RouterTemplateXenCK, "Advanced", "SystemVM Template (XenServer)",
             "Name of the default router template on Xenserver.", true, ConfigKey.Scope.Zone, null);
@@ -67,6 +69,12 @@ public interface VirtualNetworkApplianceManager extends Manager, VirtualNetworkA
             "If true, router minimum required version is checked before sending command", false);
     static final ConfigKey<Boolean> UseExternalDnsServers = new ConfigKey<Boolean>(Boolean.class, "use.external.dns", "Advanced", "false",
             "Bypass internal dns, use external dns1 and dns2", true, ConfigKey.Scope.Zone, null);
+    static final ConfigKey<String> VirtualRouterServiceOffering = new ConfigKey<String>(String.class, VirtualRouterServiceOfferingCK, "Advanced", "",
+            "Uuid of the service offering used by virtual routers; if NULL - system offering will be used", true, ConfigKey.Scope.Account, null);
+    static final ConfigKey<String> NetworkVirtualRouterServiceOffering = new ConfigKey<String>(String.class, NetworkVirtualRouterServiceOfferingCK, "Advanced", "",
+            "Uuid of the service offering used by virtual routers of this network; if NULL - account/system offering will be used", true, ConfigKey.Scope.Network, null);
+    static final ConfigKey<String> VpcVirtualRouterServiceOffering = new ConfigKey<String>(String.class, VpcVirtualRouterServiceOfferingCK, "Advanced", "",
+            "Uuid of the service offering used by virtual routers of this vpc; if NULL - account/system offering will be used", true, ConfigKey.Scope.Vpc, null);
 
     public static final int DEFAULT_ROUTER_VM_RAMSIZE = 256;            // 256M
     public static final int DEFAULT_ROUTER_CPU_MHZ = 500;                // 500 MHz

@@ -16,87 +16,6 @@
 // under the License.
 package com.cloud.configuration;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.inject.Inject;
-import javax.naming.ConfigurationException;
-
-import com.google.common.collect.Sets;
-
-import org.apache.cloudstack.acl.SecurityChecker;
-import org.apache.cloudstack.affinity.AffinityGroup;
-import org.apache.cloudstack.affinity.AffinityGroupService;
-import org.apache.cloudstack.affinity.dao.AffinityGroupDao;
-import org.apache.cloudstack.api.command.admin.config.UpdateCfgCmd;
-import org.apache.cloudstack.api.command.admin.network.CreateManagementNetworkIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.network.CreateNetworkOfferingCmd;
-import org.apache.cloudstack.api.command.admin.network.DeleteManagementNetworkIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.network.DeleteNetworkOfferingCmd;
-import org.apache.cloudstack.api.command.admin.network.UpdateNetworkOfferingCmd;
-import org.apache.cloudstack.api.command.admin.offering.CreateDiskOfferingCmd;
-import org.apache.cloudstack.api.command.admin.offering.CreateServiceOfferingCmd;
-import org.apache.cloudstack.api.command.admin.offering.DeleteDiskOfferingCmd;
-import org.apache.cloudstack.api.command.admin.offering.DeleteServiceOfferingCmd;
-import org.apache.cloudstack.api.command.admin.offering.UpdateDiskOfferingCmd;
-import org.apache.cloudstack.api.command.admin.offering.UpdateServiceOfferingCmd;
-import org.apache.cloudstack.api.command.admin.pod.DeletePodCmd;
-import org.apache.cloudstack.api.command.admin.pod.UpdatePodCmd;
-import org.apache.cloudstack.api.command.admin.region.CreatePortableIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.region.DeletePortableIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.region.ListPortableIpRangesCmd;
-import org.apache.cloudstack.api.command.admin.vlan.CreateVlanIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.vlan.DedicatePublicIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.vlan.DeleteVlanIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.vlan.ReleasePublicIpRangeCmd;
-import org.apache.cloudstack.api.command.admin.zone.CreateZoneCmd;
-import org.apache.cloudstack.api.command.admin.zone.DeleteZoneCmd;
-import org.apache.cloudstack.api.command.admin.zone.UpdateZoneCmd;
-import org.apache.cloudstack.api.command.user.network.ListNetworkOfferingsCmd;
-import org.apache.cloudstack.config.Configuration;
-import org.apache.cloudstack.context.CallContext;
-import org.apache.cloudstack.engine.orchestration.service.NetworkOrchestrationService;
-import org.apache.cloudstack.engine.subsystem.api.storage.DataStoreManager;
-import org.apache.cloudstack.engine.subsystem.api.storage.ZoneScope;
-import org.apache.cloudstack.framework.config.ConfigDepot;
-import org.apache.cloudstack.framework.config.ConfigKey;
-import org.apache.cloudstack.framework.config.Configurable;
-import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
-import org.apache.cloudstack.framework.config.impl.ConfigurationVO;
-import org.apache.cloudstack.framework.messagebus.MessageBus;
-import org.apache.cloudstack.framework.messagebus.PublishScope;
-import org.apache.cloudstack.region.PortableIp;
-import org.apache.cloudstack.region.PortableIpDao;
-import org.apache.cloudstack.region.PortableIpRange;
-import org.apache.cloudstack.region.PortableIpRangeDao;
-import org.apache.cloudstack.region.PortableIpRangeVO;
-import org.apache.cloudstack.region.PortableIpVO;
-import org.apache.cloudstack.region.Region;
-import org.apache.cloudstack.region.RegionVO;
-import org.apache.cloudstack.region.dao.RegionDao;
-import org.apache.cloudstack.storage.datastore.db.ImageStoreDao;
-import org.apache.cloudstack.storage.datastore.db.ImageStoreDetailsDao;
-import org.apache.cloudstack.storage.datastore.db.ImageStoreVO;
-import org.apache.cloudstack.storage.datastore.db.PrimaryDataStoreDao;
-import org.apache.cloudstack.storage.datastore.db.StoragePoolDetailsDao;
-import org.apache.cloudstack.storage.datastore.db.StoragePoolVO;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.apache.log4j.Logger;
-
 import com.cloud.alert.AlertManager;
 import com.cloud.api.ApiDBUtils;
 import com.cloud.capacity.CapacityManager;
@@ -164,6 +83,8 @@ import com.cloud.network.dao.FirewallRulesDao;
 import com.cloud.network.dao.IPAddressDao;
 import com.cloud.network.dao.IPAddressVO;
 import com.cloud.network.dao.NetworkDao;
+import com.cloud.network.dao.NetworkDetailVO;
+import com.cloud.network.dao.NetworkDetailsDao;
 import com.cloud.network.dao.NetworkVO;
 import com.cloud.network.dao.PhysicalNetworkDao;
 import com.cloud.network.dao.PhysicalNetworkTrafficTypeDao;
@@ -171,6 +92,8 @@ import com.cloud.network.dao.PhysicalNetworkTrafficTypeVO;
 import com.cloud.network.dao.PhysicalNetworkVO;
 import com.cloud.network.rules.LoadBalancerContainer.Scheme;
 import com.cloud.network.vpc.VpcManager;
+import com.cloud.network.vpc.VpcVO;
+import com.cloud.network.vpc.dao.VpcDao;
 import com.cloud.offering.DiskOffering;
 import com.cloud.offering.NetworkOffering;
 import com.cloud.offering.NetworkOffering.Availability;
@@ -232,6 +155,87 @@ import com.cloud.vm.dao.VMInstanceDao;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.Sets;
+import org.apache.cloudstack.acl.SecurityChecker;
+import org.apache.cloudstack.affinity.AffinityGroup;
+import org.apache.cloudstack.affinity.AffinityGroupService;
+import org.apache.cloudstack.affinity.dao.AffinityGroupDao;
+import org.apache.cloudstack.api.command.admin.config.UpdateCfgCmd;
+import org.apache.cloudstack.api.command.admin.network.CreateManagementNetworkIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.network.CreateNetworkOfferingCmd;
+import org.apache.cloudstack.api.command.admin.network.DeleteManagementNetworkIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.network.DeleteNetworkOfferingCmd;
+import org.apache.cloudstack.api.command.admin.network.UpdateNetworkOfferingCmd;
+import org.apache.cloudstack.api.command.admin.offering.CreateDiskOfferingCmd;
+import org.apache.cloudstack.api.command.admin.offering.CreateServiceOfferingCmd;
+import org.apache.cloudstack.api.command.admin.offering.DeleteDiskOfferingCmd;
+import org.apache.cloudstack.api.command.admin.offering.DeleteServiceOfferingCmd;
+import org.apache.cloudstack.api.command.admin.offering.UpdateDiskOfferingCmd;
+import org.apache.cloudstack.api.command.admin.offering.UpdateServiceOfferingCmd;
+import org.apache.cloudstack.api.command.admin.pod.DeletePodCmd;
+import org.apache.cloudstack.api.command.admin.pod.UpdatePodCmd;
+import org.apache.cloudstack.api.command.admin.region.CreatePortableIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.region.DeletePortableIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.region.ListPortableIpRangesCmd;
+import org.apache.cloudstack.api.command.admin.vlan.CreateVlanIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.vlan.DedicatePublicIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.vlan.DeleteVlanIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.vlan.ReleasePublicIpRangeCmd;
+import org.apache.cloudstack.api.command.admin.zone.CreateZoneCmd;
+import org.apache.cloudstack.api.command.admin.zone.DeleteZoneCmd;
+import org.apache.cloudstack.api.command.admin.zone.UpdateZoneCmd;
+import org.apache.cloudstack.api.command.user.network.ListNetworkOfferingsCmd;
+import org.apache.cloudstack.config.Configuration;
+import org.apache.cloudstack.context.CallContext;
+import org.apache.cloudstack.engine.orchestration.service.NetworkOrchestrationService;
+import org.apache.cloudstack.engine.subsystem.api.storage.DataStoreManager;
+import org.apache.cloudstack.engine.subsystem.api.storage.ZoneScope;
+import org.apache.cloudstack.framework.config.ConfigDepot;
+import org.apache.cloudstack.framework.config.ConfigKey;
+import org.apache.cloudstack.framework.config.ConfigKey.Scope;
+import org.apache.cloudstack.framework.config.Configurable;
+import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
+import org.apache.cloudstack.framework.config.impl.ConfigurationVO;
+import org.apache.cloudstack.framework.messagebus.MessageBus;
+import org.apache.cloudstack.framework.messagebus.PublishScope;
+import org.apache.cloudstack.region.PortableIp;
+import org.apache.cloudstack.region.PortableIpDao;
+import org.apache.cloudstack.region.PortableIpRange;
+import org.apache.cloudstack.region.PortableIpRangeDao;
+import org.apache.cloudstack.region.PortableIpRangeVO;
+import org.apache.cloudstack.region.PortableIpVO;
+import org.apache.cloudstack.region.Region;
+import org.apache.cloudstack.region.RegionVO;
+import org.apache.cloudstack.region.dao.RegionDao;
+import org.apache.cloudstack.resourcedetail.VpcDetailVO;
+import org.apache.cloudstack.resourcedetail.dao.VpcDetailsDao;
+import org.apache.cloudstack.storage.datastore.db.ImageStoreDao;
+import org.apache.cloudstack.storage.datastore.db.ImageStoreDetailsDao;
+import org.apache.cloudstack.storage.datastore.db.ImageStoreVO;
+import org.apache.cloudstack.storage.datastore.db.PrimaryDataStoreDao;
+import org.apache.cloudstack.storage.datastore.db.StoragePoolDetailsDao;
+import org.apache.cloudstack.storage.datastore.db.StoragePoolVO;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.log4j.Logger;
+
+import javax.inject.Inject;
+import javax.naming.ConfigurationException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
 
 public class ConfigurationManagerImpl extends ManagerBase implements ConfigurationManager, ConfigurationService, Configurable {
     public static final Logger s_logger = Logger.getLogger(ConfigurationManagerImpl.class);
@@ -333,6 +337,12 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
     @Inject
     DomainDetailsDao _domainDetailsDao;
     @Inject
+    NetworkDetailsDao _networkDetailsDao;
+    @Inject
+    VpcDao _vpcDao;
+    @Inject
+    VpcDetailsDao _vpcDetailsDao;
+    @Inject
     PrimaryDataStoreDao _storagePoolDao;
     @Inject
     NicSecondaryIpDao _nicSecondaryIpDao;
@@ -375,6 +385,8 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             "Indicates whether to remove the dedicated virtual ip ranges in DeleteAccount or DeleteDomain. Default value is false, they will be released instead of removed", true, ConfigKey.Scope.Global, null);
     public static final ConfigKey<Boolean> ResourceCountAllDedicatedIpsForAccount = new ConfigKey<Boolean>(Boolean.class, "resource.count.all.dedicated.ips", "Advanced", "true",
             "Indicates whether to take all ips in dedicated virtual ip ranges into calculation in resource count and limitation for an account", true, ConfigKey.Scope.Global, null);
+    public static final ConfigKey<Boolean> EnableAccountSettingsForDomain = new ConfigKey<Boolean>(Boolean.class, "enable.account.settings.for.domain", "Advanced", "false",
+            "Indicates whether to add account settings for domain. If true, account settings will be added to domain settings, all accounts in the domain will inherit the domain setting if account setting is not set.", true, ConfigKey.Scope.Global, null);
 
     private static final String DefaultForSystemVmsForPodIpRange = "0";
     private static final String DefaultVlanForPodIpRange = Vlan.UNTAGGED.toString();
@@ -574,6 +586,35 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                     _domainDetailsDao.update(domainDetailVO.getId(), domainDetailVO);
                 }
                 break;
+            case Network:
+                final NetworkVO network = _networkDao.findById(resourceId);
+                if (network == null) {
+                    throw new InvalidParameterValueException("unable to find network by id " + resourceId);
+                }
+                NetworkDetailVO networkDetailVO = _networkDetailsDao.findDetail(resourceId, name);
+                if (networkDetailVO == null) {
+                    networkDetailVO = new NetworkDetailVO(resourceId, name, value, true);
+                    _networkDetailsDao.persist(networkDetailVO);
+                } else {
+                    networkDetailVO.setValue(value);
+                    _networkDetailsDao.update(networkDetailVO.getId(), networkDetailVO);
+                }
+                break;
+
+            case Vpc:
+                final VpcVO vpc = _vpcDao.findById(resourceId);
+                if (vpc == null) {
+                    throw new InvalidParameterValueException("unable to find vpc by id " + resourceId);
+                }
+                VpcDetailVO vpcDetailVO = _vpcDetailsDao.findDetail(resourceId, name);
+                if (vpcDetailVO == null) {
+                    vpcDetailVO = new VpcDetailVO(resourceId, name, value, true);
+                    _vpcDetailsDao.persist(vpcDetailVO);
+                } else {
+                    vpcDetailVO.setValue(value);
+                    _vpcDetailsDao.update(vpcDetailVO.getId(), vpcDetailVO);
+                }
+                break;
 
             default:
                 throw new InvalidParameterValueException("Scope provided is invalid");
@@ -684,10 +725,12 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         final Long accountId = cmd.getAccountId();
         final Long imageStoreId = cmd.getImageStoreId();
         final Long domainId = cmd.getDomainId();
+        final Long networkId = cmd.getNetworkId();
+        final Long vpcId = cmd.getVpcId();
         CallContext.current().setEventDetails(" Name: " + name + " New Value: " + (name.toLowerCase().contains("password") ? "*****" : value == null ? "" : value));
         // check if config value exists
         final ConfigurationVO config = _configDao.findByName(name);
-        String catergory = null;
+        String category = null;
 
         // FIX ME - All configuration parameters are not moved from config.java to configKey
         if (config == null) {
@@ -695,9 +738,9 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
                 s_logger.warn("Probably the component manager where configuration variable " + name + " is defined needs to implement Configurable interface");
                 throw new InvalidParameterValueException("Config parameter with name " + name + " doesn't exist");
             }
-            catergory = _configDepot.get(name).category();
+            category = _configDepot.get(name).category();
         } else {
-            catergory = config.getCategory();
+            category = config.getCategory();
         }
 
         if (value == null) {
@@ -734,6 +777,16 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             id = domainId;
             paramCountCheck++;
         }
+        if (networkId != null) {
+            scope = ConfigKey.Scope.Network.toString();
+            id = networkId;
+            paramCountCheck++;
+        }
+        if (vpcId != null) {
+            scope = ConfigKey.Scope.Vpc.toString();
+            id = vpcId;
+            paramCountCheck++;
+        }
         if (storagepoolId != null) {
             scope = ConfigKey.Scope.StoragePool.toString();
             id = storagepoolId;
@@ -749,7 +802,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             throw new InvalidParameterValueException("cannot handle multiple IDs, provide only one ID corresponding to the scope");
         }
 
-        final String updatedValue = updateConfiguration(userId, name, catergory, value, scope, id);
+        final String updatedValue = updateConfiguration(userId, name, category, value, scope, id);
         if (value == null && updatedValue == null || updatedValue.equalsIgnoreCase(value)) {
             return _configDao.findByName(name);
         } else {
@@ -767,7 +820,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
         final String configScope = cfg.getScope();
         if (scope != null) {
-            if (!configScope.contains(scope)) {
+            if (!configScope.contains(scope) && !(EnableAccountSettingsForDomain.value() && configScope.equals(Scope.Account.toString()) && scope.equals(Scope.Domain.toString()))) {
                 s_logger.error("Invalid scope id provided for the parameter " + name);
                 return "Invalid scope id provided for the parameter " + name;
             }
@@ -1656,9 +1709,9 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         }
 
         // Check if there are any non-removed VMware datacenters in the zone.
-        //if (_vmwareDatacenterZoneMapDao.findByZoneId(zoneId) != null) {
-        //    throw new CloudRuntimeException(errorMsg + "there are VMware datacenters in this zone.");
-        //}
+//        if (_vmwareDatacenterZoneMapDao.findByZoneId(zoneId) != null) {
+//            throw new CloudRuntimeException(errorMsg + "there are VMware datacenters in this zone.");
+//        }
     }
 
     private void checkZoneParameters(final String zoneName, final String dns1, final String dns2, final String internalDns1, final String internalDns2, final boolean checkForDuplicates, final Long domainId,
@@ -2522,28 +2575,28 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         }
 
         // Note: tag editing commented out for now; keeping the code intact,
-        // might need to re-enable in next releases
-        // if (tags != null)
-        // {
-        // if (tags.trim().isEmpty() && offeringHandle.getTags() == null)
-        // {
-        // //no new tags; no existing tags
-        // offering.setTagsArray(csvTagsToList(null));
-        // }
-        // else if (!tags.trim().isEmpty() && offeringHandle.getTags() != null)
-        // {
-        // //new tags + existing tags
-        // List<String> oldTags = csvTagsToList(offeringHandle.getTags());
-        // List<String> newTags = csvTagsToList(tags);
-        // oldTags.addAll(newTags);
-        // offering.setTagsArray(oldTags);
-        // }
-        // else if(!tags.trim().isEmpty())
-        // {
-        // //new tags; NO existing tags
-        // offering.setTagsArray(csvTagsToList(tags));
-        // }
-        // }
+//         might need to re-enable in next releases
+//         if (tags != null)
+//         {
+//         if (tags.trim().isEmpty() && offeringHandle.getTags() == null)
+//         {
+//         //no new tags; no existing tags
+//         offering.setTagsArray(csvTagsToList(null));
+//         }
+//         else if (!tags.trim().isEmpty() && offeringHandle.getTags() != null)
+//         {
+//         //new tags + existing tags
+//         List<String> oldTags = csvTagsToList(offeringHandle.getTags());
+//         List<String> newTags = csvTagsToList(tags);
+//         oldTags.addAll(newTags);
+//         offering.setTagsArray(oldTags);
+//         }
+//         else if(!tags.trim().isEmpty())
+//         {
+//         //new tags; NO existing tags
+//         offering.setTagsArray(csvTagsToList(tags));
+//         }
+//         }
 
         if (_serviceOfferingDao.update(id, offering)) {
             offering = _serviceOfferingDao.findById(id);
@@ -5723,6 +5776,7 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
 
     @Override
     public ConfigKey<?>[] getConfigKeys() {
-        return new ConfigKey<?>[] {SystemVMUseLocalStorage, DeleteDedicatedIpRangesInDomainAccountRemoval, ResourceCountAllDedicatedIpsForAccount };
+        return new ConfigKey<?>[] {SystemVMUseLocalStorage, DeleteDedicatedIpRangesInDomainAccountRemoval, ResourceCountAllDedicatedIpsForAccount,
+                EnableAccountSettingsForDomain };
     }
 }

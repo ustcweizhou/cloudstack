@@ -17,56 +17,6 @@
 
 package com.cloud.network.router;
 
-import java.math.BigInteger;
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimeZone;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
-import javax.naming.ConfigurationException;
-
-import org.apache.log4j.Logger;
-import org.cloud.network.router.deployment.RouterDeploymentDefinitionBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-
-import org.apache.cloudstack.alert.AlertService;
-import org.apache.cloudstack.alert.AlertService.AlertType;
-import org.apache.cloudstack.api.command.admin.router.RebootRouterCmd;
-import org.apache.cloudstack.api.command.admin.router.UpgradeRouterCmd;
-import org.apache.cloudstack.api.command.admin.router.UpgradeRouterTemplateCmd;
-import org.apache.cloudstack.config.ApiServiceConfiguration;
-import org.apache.cloudstack.context.CallContext;
-import org.apache.cloudstack.engine.orchestration.service.NetworkOrchestrationService;
-import org.apache.cloudstack.framework.config.ConfigDepot;
-import org.apache.cloudstack.framework.config.ConfigKey;
-import org.apache.cloudstack.framework.config.Configurable;
-import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
-import org.apache.cloudstack.framework.jobs.AsyncJobManager;
-import org.apache.cloudstack.framework.jobs.impl.AsyncJobVO;
-import org.apache.cloudstack.managed.context.ManagedContextRunnable;
-import org.apache.cloudstack.network.topology.NetworkTopology;
-import org.apache.cloudstack.network.topology.NetworkTopologyContext;
-import org.apache.cloudstack.utils.identity.ManagementServerNode;
-import org.apache.cloudstack.utils.usage.UsageUtils;
-
 import com.cloud.agent.AgentManager;
 import com.cloud.agent.Listener;
 import com.cloud.agent.api.AgentControlAnswer;
@@ -243,6 +193,53 @@ import com.cloud.vm.dao.NicIpAliasVO;
 import com.cloud.vm.dao.UserVmDao;
 import com.cloud.vm.dao.UserVmDetailsDao;
 import com.cloud.vm.dao.VMInstanceDao;
+import org.apache.cloudstack.alert.AlertService;
+import org.apache.cloudstack.alert.AlertService.AlertType;
+import org.apache.cloudstack.api.command.admin.router.RebootRouterCmd;
+import org.apache.cloudstack.api.command.admin.router.UpgradeRouterCmd;
+import org.apache.cloudstack.api.command.admin.router.UpgradeRouterTemplateCmd;
+import org.apache.cloudstack.config.ApiServiceConfiguration;
+import org.apache.cloudstack.context.CallContext;
+import org.apache.cloudstack.engine.orchestration.service.NetworkOrchestrationService;
+import org.apache.cloudstack.framework.config.ConfigDepot;
+import org.apache.cloudstack.framework.config.ConfigKey;
+import org.apache.cloudstack.framework.config.Configurable;
+import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
+import org.apache.cloudstack.framework.jobs.AsyncJobManager;
+import org.apache.cloudstack.framework.jobs.impl.AsyncJobVO;
+import org.apache.cloudstack.managed.context.ManagedContextRunnable;
+import org.apache.cloudstack.network.topology.NetworkTopology;
+import org.apache.cloudstack.network.topology.NetworkTopologyContext;
+import org.apache.cloudstack.utils.identity.ManagementServerNode;
+import org.apache.cloudstack.utils.usage.UsageUtils;
+import org.apache.log4j.Logger;
+import org.cloud.network.router.deployment.RouterDeploymentDefinitionBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import javax.inject.Inject;
+import javax.naming.ConfigurationException;
+import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * VirtualNetworkApplianceManagerImpl manages the different types of virtual
@@ -2588,7 +2585,8 @@ Configurable, StateListener<VirtualMachine.State, VirtualMachine.Event, VirtualM
 
     @Override
     public ConfigKey<?>[] getConfigKeys() {
-        return new ConfigKey<?>[] { UseExternalDnsServers, routerVersionCheckEnabled, SetServiceMonitor, RouterAlertsCheckInterval };
+        return new ConfigKey<?>[] { UseExternalDnsServers, routerVersionCheckEnabled, SetServiceMonitor, RouterAlertsCheckInterval,
+                VirtualRouterServiceOffering, NetworkVirtualRouterServiceOffering, VpcVirtualRouterServiceOffering };
     }
 
     @Override

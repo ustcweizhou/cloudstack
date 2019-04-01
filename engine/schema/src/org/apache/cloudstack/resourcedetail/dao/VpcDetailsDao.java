@@ -16,11 +16,26 @@
 // under the License.
 package org.apache.cloudstack.resourcedetail.dao;
 
+import java.util.Map;
+import java.util.List;
+
 import org.apache.cloudstack.resourcedetail.ResourceDetailsDao;
 import org.apache.cloudstack.resourcedetail.VpcDetailVO;
 
 import com.cloud.utils.db.GenericDao;
 
 public interface VpcDetailsDao extends GenericDao<VpcDetailVO, Long>, ResourceDetailsDao<VpcDetailVO> {
+
+    Map<String, String> findDetails(long vpcId);
+
+    void persist(long vpcId, Map<String, String> details);
+
+    VpcDetailVO findDetail(long vpcId, String name);
+
+    List<VpcDetailVO> listDetailsByName(String name);
+
+    void deleteDetails(long vpcId);
+
+    void update(long vpcId, Map<String, String> details);
 
 }

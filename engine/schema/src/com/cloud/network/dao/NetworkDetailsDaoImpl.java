@@ -17,16 +17,102 @@
 package com.cloud.network.dao;
 
 
+import com.cloud.utils.db.QueryBuilder;
+import com.cloud.utils.db.SearchBuilder;
+import com.cloud.utils.db.SearchCriteria;
+import com.cloud.utils.db.SearchCriteria.Op;
+import com.cloud.utils.db.TransactionLegacy;
+import org.apache.cloudstack.framework.config.ConfigKey;
+import org.apache.cloudstack.framework.config.ConfigKey.Scope;
+import org.apache.cloudstack.framework.config.ScopedConfigStorage;
+import org.apache.cloudstack.resourcedetail.ResourceDetailsDaoBase;
 import org.springframework.stereotype.Component;
 
-import org.apache.cloudstack.resourcedetail.ResourceDetailsDaoBase;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
-public class NetworkDetailsDaoImpl extends ResourceDetailsDaoBase<NetworkDetailVO> implements NetworkDetailsDao {
+public class NetworkDetailsDaoImpl extends ResourceDetailsDaoBase<NetworkDetailVO> implements NetworkDetailsDao, ScopedConfigStorage {
+    protected final SearchBuilder<NetworkDetailVO> networkSearch;
 
     @Override
     public void addDetail(long resourceId, String key, String value, boolean display) {
         super.addDetail(new NetworkDetailVO(resourceId, key, value, display));
     }
 
+    protected NetworkDetailsDaoImpl() {
+        networkSearch = createSearchBuilder();
+        networkSearch.and("networkId", networkSearch.entity().getResourceId(), Op.EQ);
+        networkSearch.done();
+    }
+
+    @Override
+    public Map<String, String> findDetails(long networkId) {
+        QueryBuilder<NetworkDetailVO> sc = QueryBuilder.create(NetworkDetailVO.class);
+        sc.and(sc.entity().getResourceId(), Op.EQ, networkId);
+        List<NetworkDetailVO> results = sc.list();
+        Map<String, String> details = new HashMap<String, String>(results.size());
+        for (NetworkDetailVO r : results) {
+            details.put(r.getName(), r.getValue());
+        }
+        return details;
+    }
+
+    @Override
+    public void persist(long networkId, Map<String, String> details) {
+        TransactionLegacy txn = TransactionLegacy.currentTxn();
+        txn.start();
+        SearchCriteria<NetworkDetailVO> sc = networkSearch.create();
+        sc.setParameters("networkId", networkId);
+        expunge(sc);
+        for (Map.Entry<String, String> detail : details.entrySet()) {
+            NetworkDetailVO vo = new NetworkDetailVO(networkId, detail.getKey(), detail.getValue(), true);
+            persist(vo);
+        }
+        txn.commit();
+    }
+
+    @Override
+    public NetworkDetailVO findDetail(long networkId, String name) {
+        QueryBuilder<NetworkDetailVO> sc = QueryBuilder.create(NetworkDetailVO.class);
+        sc.and(sc.entity().getResourceId(), Op.EQ, networkId);
+        sc.and(sc.entity().getName(), Op.EQ, name);
+        return sc.find();
+    }
+
+    @Override
+    public List<NetworkDetailVO> listDetailsByName(String name) {
+        QueryBuilder<NetworkDetailVO> sc = QueryBuilder.create(NetworkDetailVO.class);
+        sc.and(sc.entity().getName(), Op.EQ, name);
+        return sc.list();
+    }
+
+    @Override
+    public void deleteDetails(long networkId) {
+        SearchCriteria<NetworkDetailVO> sc = networkSearch.create();
+        sc.setParameters("networkId", networkId);
+        List<NetworkDetailVO> results = search(sc, null);
+        for (NetworkDetailVO result : results) {
+            remove(result.getId());
+        }
+    }
+
+    @Override
+    public void update(long networkId, Map<String, String> details) {
+        Map<String, String> oldDetails = findDetails(networkId);
+        oldDetails.putAll(details);
+        persist(networkId, oldDetails);
+    }
+
+    @Override
+    public Scope getScope() {
+        return ConfigKey.Scope.Network;
+    }
+
+    @Override
+    public String getConfigValue(long id, ConfigKey<?> key) {
+        NetworkDetailVO vo = findDetail(id, key.key());
+        return vo == null ? null : vo.getValue();
+    }
 }

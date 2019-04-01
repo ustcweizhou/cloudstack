@@ -70,6 +70,10 @@ public class VpcDetailVO implements ResourceDetail {
         return value;
     }
 
+    public void setValue(String value) {
+        this.value = value;
+    }
+
     @Override
     public long getResourceId() {
         return resourceId;

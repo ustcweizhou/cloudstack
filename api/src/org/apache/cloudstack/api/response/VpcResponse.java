@@ -18,6 +18,7 @@ package org.apache.cloudstack.api.response;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.ApiConstants;
@@ -123,6 +124,10 @@ public class VpcResponse extends BaseResponse implements ControlledEntityRespons
     @Param(description = "if this VPC has redundant router", since = "4.6")
     private boolean redundantRouter;
 
+    @SerializedName(ApiConstants.DETAILS)
+    @Param(description = "details for the vpc")
+    private Map<String, String> details;
+
     public void setId(final String id) {
         this.id = id;
     }
@@ -222,5 +227,9 @@ public class VpcResponse extends BaseResponse implements ControlledEntityRespons
 
     public void setRedundantRouter(final Boolean redundantRouter) {
         this.redundantRouter = redundantRouter;
+    }
+
+    public void setDetails(Map<String, String> details) {
+        this.details = details;
     }
 }

@@ -16,10 +16,24 @@
 // under the License.
 package com.cloud.network.dao;
 
+import com.cloud.utils.db.GenericDao;
 import org.apache.cloudstack.resourcedetail.ResourceDetailsDao;
 
-import com.cloud.utils.db.GenericDao;
+import java.util.List;
+import java.util.Map;
 
 public interface NetworkDetailsDao extends GenericDao<NetworkDetailVO, Long>, ResourceDetailsDao<NetworkDetailVO> {
+
+    Map<String, String> findDetails(long networkId);
+
+    void persist(long networkId, Map<String, String> details);
+
+    NetworkDetailVO findDetail(long networkId, String name);
+
+    List<NetworkDetailVO> listDetailsByName(String name);
+
+    void deleteDetails(long networkId);
+
+    void update(long networkId, Map<String, String> details);
 
 }

@@ -20,7 +20,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 import com.cloud.domain.DomainDetailVO;
+import com.cloud.domain.DomainVO;
 import com.cloud.utils.db.GenericDaoBase;
 import com.cloud.utils.db.QueryBuilder;
 import com.cloud.utils.db.SearchBuilder;
@@ -33,6 +36,9 @@ import org.apache.cloudstack.framework.config.ScopedConfigStorage;
 
 public class DomainDetailsDaoImpl extends GenericDaoBase<DomainDetailVO, Long> implements DomainDetailsDao, ScopedConfigStorage {
     protected final SearchBuilder<DomainDetailVO> domainSearch;
+
+    @Inject
+    protected DomainDao _domainDao;
 
     protected DomainDetailsDaoImpl() {
         domainSearch = createSearchBuilder();
@@ -98,7 +104,18 @@ public class DomainDetailsDaoImpl extends GenericDaoBase<DomainDetailVO, Long> i
 
     @Override
     public String getConfigValue(long id, ConfigKey<?> key) {
-        DomainDetailVO vo = findDetail(id, key.key());
+        DomainDetailVO vo = null;
+        DomainVO domain = _domainDao.findById(id);;
+        while (domain != null) {
+            vo = findDetail(domain.getId(), key.key());
+            if (vo != null) {
+                break;
+            } else if (domain.getParent() != null){
+                domain = _domainDao.findById(domain.getParent());
+            } else {
+                break;
+            }
+        }
         return vo == null ? null : vo.getValue();
     }
 }

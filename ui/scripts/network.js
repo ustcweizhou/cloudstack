@@ -1255,6 +1255,10 @@
                                 hiddenTabs.push("virtualRouters");
                             }
 
+                            if(!isAdmin()) {
+                                hiddenTabs.push('settings');
+                            }
+
                             return hiddenTabs;
                         },
 
@@ -1488,6 +1492,55 @@
                                         }
                                     });
                                 }
+                            },
+
+                            settings: {
+                                title: 'label.settings',
+                                custom: cloudStack.uiCustom.granularSettings({
+                                    dataProvider: function(args) {
+                                        $.ajax({
+                                            url: createURL('listConfigurations&networkid=' + args.context.networks[0].id),
+                                            data: listViewDataProvider(args, {}, { searchBy: 'name' }),
+                                            success: function(json) {
+                                                args.response.success({
+                                                    data: json.listconfigurationsresponse.configuration
+                                                });
+
+                                            },
+
+                                            error: function(json) {
+                                                args.response.error(parseXMLHttpResponse(json));
+
+                                            }
+                                        });
+
+                                    },
+                                    actions: {
+                                        edit: function(args) {
+                                            var data = {
+                                                name: args.data.jsonObj.name,
+                                                value: args.data.value
+                                            };
+
+                                            $.ajax({
+                                                url: createURL('updateConfiguration&networkid=' + args.context.networks[0].id),
+                                                data: data,
+                                                success: function(json) {
+                                                    var item = json.updateconfigurationresponse.configuration;
+                                                    args.response.success({
+                                                        data: item
+                                                    });
+                                                },
+
+                                                error: function(json) {
+                                                    args.response.error(parseXMLHttpResponse(json));
+                                                }
+
+                                            });
+
+                                        }
+                                    }
+                                })
                             },
 
                             egressRules: {
@@ -5611,9 +5664,13 @@
                             var hiddenTabs = [];
                             var isRouterOwner = isAdmin();
                             if (!isRouterOwner) {
-                                hiddenTabs.push("router");
                                 hiddenTabs.push("virtualRouters");
                             }
+
+                            if(!isAdmin()) {
+                                hiddenTabs.push('vpcSettings');
+                            }
+
                             return hiddenTabs;
                         },
 
@@ -5705,81 +5762,78 @@
                                     });
                                 }
                             },
-                            router: {
-                                title: 'label.vpc.router.details',
-                                fields: [{
-                                    name: {
-                                        label: 'label.name'
-                                    }
-                                }, {
-                                    state: {
-                                        label: 'label.state'
-                                    },
-                                    hostname: {
-                                        label: 'label.host'
-                                    },
-                                    linklocalip: {
-                                        label: 'label.linklocal.ip'
-                                    },
-                                    isredundantrouter: {
-                                        label: 'label.redundant.router',
-                                        converter: function(booleanValue) {
-                                            if (booleanValue == true) {
-                                                return "Yes";
-                                            }
-                                            return "No";
-                                        }
-                                    },
-                                    redundantstate: {
-                                        label: 'label.redundant.state'
-                                    },
-                                    id: {
-                                        label: 'label.id'
-                                    },
-                                    serviceofferingname: {
-                                        label: 'label.service.offering'
-                                    },
-                                    zonename: {
-                                        label: 'label.zone'
-                                    },
-                                    gateway: {
-                                        label: 'label.gateway'
-                                    },
-                                    publicip: {
-                                        label: 'label.public.ip'
-                                    },
-                                    guestipaddress: {
-                                        label: 'label.guest.ip'
-                                    },
-                                    dns1: {
-                                        label: 'label.dns'
-                                    },
-                                    account: {
-                                        label: 'label.account'
-                                    },
-                                    domain: {
-                                        label: 'label.domain'
-                                    }
-                                }],
 
-                                dataProvider: function(args) {
-                                    $.ajax({
-                                        url: createURL("listRouters&listAll=true&vpcid=" + args.context.vpc[0].id),
-                                        dataType: "json",
-                                        async: true,
-                                        success: function(json) {
-                                            for (var i = 0; i < json.listroutersresponse.router.length; i++) {
-                                                var item = json.listroutersresponse.router[i];
-
+                            vpcSettings: {
+                                title: 'label.settings',
+                                custom: cloudStack.uiCustom.granularSettings({
+                                    dataProvider: function(args) {
+                                        $.ajax({
+                                            url: createURL('listConfigurations&vpcid=' + args.context.vpc[0].id),
+                                            data: listViewDataProvider(args, {}, { searchBy: 'name' }),
+                                            success: function(json) {
                                                 args.response.success({
-                                                    actionFilter: cloudStack.sections.system.routerActionFilter,
-                                                    data: item
+                                                    data: json.listconfigurationsresponse.configuration
                                                 });
+
+                                            },
+
+                                            error: function(json) {
+                                                args.response.error(parseXMLHttpResponse(json));
+
                                             }
+                                        });
+
+                                    },
+                                    actions: {
+                                        edit: function(args) {
+                                            var data = {
+                                                name: args.data.jsonObj.name,
+                                                value: args.data.value
+                                            };
+
+                                            $.ajax({
+                                                url: createURL('updateConfiguration&vpcid=' + args.context.vpc[0].id),
+                                                data: data,
+                                                success: function(json) {
+                                                    var item = json.updateconfigurationresponse.configuration;
+                                                    args.response.success({
+                                                        data: item
+                                                    });
+                                                },
+
+                                                error: function(json) {
+                                                    args.response.error(parseXMLHttpResponse(json));
+                                                }
+
+                                            });
+
+                                        },
+                                        resetvalue: function(args) {
+                                            var data = {
+                                                name: args.data.jsonObj.name
+                                            };
+
+                                            $.ajax({
+                                                url: createURL('resetConfiguration&vpcid=' + args.context.vpc[0].id),
+                                                data: data,
+                                                success: function(json) {
+                                                    var item = json.resetconfigurationresponse.configuration;
+                                                    args.response.success({
+                                                        data: item
+                                                    });
+                                                },
+
+                                                error: function(json) {
+                                                    args.response.error(parseXMLHttpResponse(json));
+                                                }
+
+                                            });
+
                                         }
-                                    });
-                                }
+                                    }
+                                })
                             },
+
                             virtualRouters: {
                                 title: "label.virtual.routers",
                                 listView: cloudStack.sections.system.subsections.virtualRouters.sections.routerNoGroup.listView

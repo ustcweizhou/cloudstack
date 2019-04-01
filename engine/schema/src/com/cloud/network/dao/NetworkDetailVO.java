@@ -16,14 +16,14 @@
 // under the License.
 package com.cloud.network.dao;
 
+import org.apache.cloudstack.api.ResourceDetail;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-
-import org.apache.cloudstack.api.ResourceDetail;
 
 @Entity
 @Table(name = "network_details")
@@ -68,6 +68,10 @@ public class NetworkDetailVO implements ResourceDetail {
     @Override
     public String getValue() {
         return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
     }
 
     @Override
