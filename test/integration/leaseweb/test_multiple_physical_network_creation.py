@@ -24,8 +24,12 @@ from nose.plugins.attrib import attr
 from marvin.cloudstackTestCase import cloudstackTestCase, unittest
 from marvin.lib.utils import (validateList,
                               cleanup_resources,
+                              _execute_ssh_command,
+                              get_host_credentials,
                               random_gen)
 from marvin.lib.base import (PhysicalNetwork,
+                             Host,
+                             TrafficType,
                              Domain,
                              Network,
                              NetworkOffering,
@@ -53,7 +57,11 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
         cls.zone = Zone(zone.__dict__)
         cls.template = get_template(cls.apiclient, cls.zone.id)
         cls._cleanup = []
-        cls.logger = logging.getLogger()
+
+        cls.logger = logging.getLogger("TestMulipleNetworkCreation")
+        cls.stream_handler = logging.StreamHandler()
+        cls.logger.setLevel(logging.DEBUG)
+        cls.logger.addHandler(cls.stream_handler)
 
         # Disable the zone to create physical networks
         cls.zone.update(
@@ -79,6 +87,42 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
 
         cls._cleanup.append(cls.physical_network)
         cls._cleanup.append(cls.physical_network_2)
+
+        cls.kvmnetworklabel=None
+        try:
+            hosts = Host.list(cls.apiclient, type='Routing')
+            if isinstance(hosts, list) and len(hosts) > 0:
+                host = hosts[0]
+            else:
+                return
+            if host.hypervisor.lower() not in "kvm":
+                return
+            host.user, host.passwd = get_host_credentials(cls.config, host.ipaddress)
+            bridges = _execute_ssh_command(host.ipaddress, 22, host.user, host.passwd, "brctl show |grep cloudbr |awk '{print $1}'")
+            existing_physical_networks = PhysicalNetwork.list(cls.apiclient)
+            for existing_physical_network in existing_physical_networks:
+                trafficTypes = TrafficType.list(
+                    cls.apiclient,
+                    physicalnetworkid=existing_physical_network.id)
+                if trafficTypes is None:
+                    continue
+                for traffic_type in trafficTypes:
+                    if traffic_type.traffictype == "Guest":
+                        try:
+                            for bridge in bridges:
+                                if bridge == str(traffic_type.kvmnetworklabel):
+                                    bridges.remove(bridge)
+                        except Exception as e:
+                            continue
+
+            if bridges is not None and len(bridges) > 0:
+                cls.kvmnetworklabel = bridges[0]
+            if cls.kvmnetworklabel is not None:
+                cls.logger.debug("Found an unused kvmnetworklabel %s" %cls.kvmnetworklabel)
+            else:
+                cls.logger.debug("Not find an unused kvmnetworklabel")
+        except Exception as e:
+            return
 
     @classmethod
     def tearDownClass(cls):
@@ -184,23 +228,29 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
         self.physical_network_3 = PhysicalNetwork.create(
             self.apiclient,
             self.services["l2-network"],
+            isolationmethods="VLAN",
             zoneid=self.zone.id
         )
 
         # Enable the network
         self.physical_network_3.update(
             self.apiclient,
-            tags="Guest",
+            tags="guest",
             state="Enabled"
         )
 
         #2. try adding traffic type Guest
-        self.physical_network_3.addTrafficType(
+        TrafficType.add(
             self.apiclient,
-            type="Guest"
+            physicalnetworkid=self.physical_network_3.id,
+            kvmnetworklabel=self.kvmnetworklabel,
+            traffictype="Guest"
         )
 
         # Create network offering
+        self.services["network_offering_shared"]["supportedservices"] = ""
+        self.services["network_offering_shared"]["serviceProviderList"] = {}
+        self.services["network_offering_shared"]["tags"] = "guest"
         self.network_offering = NetworkOffering.create(
             self.apiclient,
             self.services["network_offering_shared"]
@@ -264,6 +314,31 @@ class TestMulipleNetworkCreation(cloudstackTestCase):
             self.apiclient,
             state='Disabled'
         )
+
+        hosts = Host.list(
+            self.apiclient,
+            id=vm.hostid
+        )
+        if isinstance(hosts, list) and len(hosts) > 0:
+            host = hosts[0]
+        else:
+            raise Exception("Cannot find the host where vm is running on")
+        if host.hypervisor.lower() not in "kvm":
+            return
+        if self.kvmnetworklabel is None:
+            return
+        try:
+            host.user, host.passwd = get_host_credentials(self.config, host.ipaddress)
+            physical_nic_kvmnetworklabel= _execute_ssh_command(host.ipaddress, 22, host.user, host.passwd, "brctl show %s | grep cloudbr |awk '{print $4}'" % self.kvmnetworklabel)
+            bridge_name = _execute_ssh_command(host.ipaddress, 22, host.user, host.passwd, "virsh domiflist %s |grep vnet |awk '{print $3}'" % vm.instancename)
+        except Exception as e:
+            return
+
+        if bridge_name is not None and physical_nic_kvmnetworklabel is not None:
+            if bridge_name[0].startswith("br%s-" %physical_nic_kvmnetworklabel[0]):
+                self.logger.debug("vm is running on physical nic %s and bridge %s" % (physical_nic_kvmnetworklabel[0], bridge_name[0]))
+            else:
+                raise Exception("vm should be running on physical nic %s but on bridge" % (physical_nic_kvmnetworklabel[0], bridge_name[0]))
 
     @attr(tags=["advanced"], required_hardware="false")
     def test_03_update_network_with_null_tags(self):
