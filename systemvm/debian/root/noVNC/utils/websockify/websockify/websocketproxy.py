@@ -37,7 +37,7 @@ except ImportError:
     from cgi import parse_qs
     from urlparse import urlparse
 
-from rijndael_lsw import decrypt
+from rijndael_cs import decrypt
 from hashlib import sha256
 from time import time
 
