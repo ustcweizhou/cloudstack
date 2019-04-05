@@ -4019,7 +4019,8 @@ class Configurations:
     """Manage Configuration"""
 
     @classmethod
-    def update(cls, apiclient, name, value=None, zoneid=None, clusterid=None, storageid=None, domainid=None, accountid=None, networkid=None, vpcid=None):
+    def update(cls, apiclient, name, value=None, zoneid=None, clusterid=None, storageid=None, domainid=None, accountid=None,
+                                        imagestoreuuid=None, networkid=None, vpcid=None):
         """Updates the specified configuration"""
 
         cmd = updateConfiguration.updateConfigurationCmd()
@@ -4059,6 +4060,31 @@ class Configurations:
         cmd = listCapabilities.listCapabilitiesCmd()
         [setattr(cmd, k, v) for k, v in kwargs.items()]
         return(apiclient.listCapabilities(cmd))
+
+    @classmethod
+    def reset(cls, apiclient, name, zoneid=None, clusterid=None, storageid=None, domainid=None, accountid=None,
+                                    networkid=None, vpcid=None):
+        """Resets the specified configuration to original value"""
+
+        cmd = resetConfiguration.resetConfigurationCmd()
+        cmd.name = name
+
+        if zoneid:
+            cmd.zoneid = zoneid
+        if clusterid:
+            cmd.clusterid = clusterid
+        if storageid:
+            cmd.storageid = storageid
+        if domainid:
+            cmd.domainid = domainid
+        if accountid:
+            cmd.accountid = accountid
+        if networkid:
+            cmd.networkid = networkid
+        if vpcid:
+            cmd.vpcid = vpcid
+
+        apiclient.resetConfiguration(cmd)
 
 class NetScaler:
     """Manage external netscaler device"""

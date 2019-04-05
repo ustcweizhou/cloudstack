@@ -9079,6 +9079,27 @@
                                                             args.response.error(parseXMLHttpResponse(json));
                                                         }
                                                     });
+                                                },
+                                                resetvalue: function(args) {
+                                                    var data = {
+                                                        name: args.data.jsonObj.name
+                                                    };
+
+                                                    $.ajax({
+                                                        url: createURL('resetConfiguration&zoneid=' + args.context.physicalResources[0].id),
+                                                        data: data,
+                                                        success: function(json) {
+                                                            var item = json.resetconfigurationresponse.configuration;
+                                                            args.response.success({
+                                                                data: item
+                                                            });
+                                                        },
+
+                                                        error: function(json) {
+                                                            args.response.error(parseXMLHttpResponse(json));
+                                                        }
+
+                                                    });
                                                 }
                                             }
                                         })
@@ -15661,8 +15682,8 @@
                                                 data: data,
                                                 success: function (json) {
                                                     var item = json.updateconfigurationresponse.configuration;
-
-                                                    if (args.data.jsonObj.name == 'cpu.overprovisioning.factor' || args.data.jsonObj.name == 'mem.overprovisioning.factor') {
+                                                    if (args.data.jsonObj.name == 'cpu.overprovisioning.factor' ||
+                                                        args.data.jsonObj.name == 'mem.overprovisioning.factor') {
                                                         cloudStack.dialog.notice({
                                                             message: 'Please note - if you are changing the over provisioning factor for a cluster with vms running, please refer to the admin guide to understand the capacity calculation.'
                                                         });
@@ -15676,6 +15697,34 @@
                                                 error: function (json) {
                                                     args.response.error(parseXMLHttpResponse(json));
                                                 }
+                                            });
+                                        },
+                                        resetvalue: function(args) {
+                                            var data = {
+                                                name: args.data.jsonObj.name
+                                            };
+
+                                            $.ajax({
+                                                url: createURL('resetConfiguration&clusterid=' + args.context.clusters[0].id),
+                                                data: data,
+                                                success: function(json) {
+                                                    var item = json.resetconfigurationresponse.configuration;
+                                                    if (args.data.jsonObj.name == 'cpu.overprovisioning.factor' ||
+                                                        args.data.jsonObj.name == 'mem.overprovisioning.factor') {
+                                                        cloudStack.dialog.notice({
+                                                            message: 'Please note - if you are changing the over provisioning factor for a cluster with vms running, please refer to the admin guide to understand the capacity calculation.'
+                                                        });
+                                                    }
+
+                                                    args.response.success({
+                                                        data: item
+                                                    });
+                                                },
+
+                                                error: function(json) {
+                                                    args.response.error(parseXMLHttpResponse(json));
+                                                }
+
                                             });
                                         }
                                     }
@@ -19222,6 +19271,28 @@
                                                     args.response.error(parseXMLHttpResponse(json));
                                                 }
                                             });
+                                        },
+                                        resetvalue: function(args) {
+                                            var data = {
+                                                name: args.data.jsonObj.name
+                                            };
+
+                                            $.ajax({
+                                                url: createURL('resetConfiguration&storageid=' + args.context.primarystorages[0].id),
+                                                data: data,
+                                                success: function(json) {
+                                                    var item = json.resetconfigurationresponse.configuration;
+                                                    args.response.success({
+                                                        data: item
+                                                    });
+                                                },
+
+                                                error: function(json) {
+                                                    args.response.error(parseXMLHttpResponse(json));
+                                                }
+
+                                            });
+
                                         }
                                     }
                                 })

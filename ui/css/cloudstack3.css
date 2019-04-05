@@ -12523,11 +12523,13 @@ div.ui-dialog div.autoscaler div.field-group div.form-container form div.form-it
   background-position: 0px -613px;
 }
 
+.resetvalue .icon,
 .restart .icon,
 .releaseDedicatedZone .icon {
   background-position: 0px -63px;
 }
 
+.resetvalue:hover .icon,
 .restart:hover .icon,
 .releaseDedicatedZone:hover .icon {
   background-position: 0px -645px;

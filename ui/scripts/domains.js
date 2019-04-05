@@ -748,6 +748,28 @@
 
                                     });
 
+                                },
+                                resetvalue: function(args) {
+                                    var data = {
+                                        name: args.data.jsonObj.name
+                                    };
+
+                                    $.ajax({
+                                        url: createURL('resetConfiguration&domainid=' + args.context.domains[0].id),
+                                        data: data,
+                                        success: function(json) {
+                                            var item = json.resetconfigurationresponse.configuration;
+                                            args.response.success({
+                                                data: item
+                                            });
+                                        },
+
+                                        error: function(json) {
+                                            args.response.error(parseXMLHttpResponse(json));
+                                        }
+
+                                    });
+
                                 }
                             }
                         })
