@@ -547,6 +547,13 @@
             });
         },
 
+        resetvalue: function($instanceRow, args) {
+            uiActions.standard($instanceRow, args, {
+                complete: function(args, $newRow) {
+                }
+            });
+        },
+
         edit: function($instanceRow, args) {
             var $td = $instanceRow.find('td.editable');
             var $edit = $td.find('div.edit');

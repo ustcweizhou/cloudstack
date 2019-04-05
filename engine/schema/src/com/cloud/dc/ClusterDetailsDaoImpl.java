@@ -103,11 +103,18 @@ public class ClusterDetailsDaoImpl extends GenericDaoBase<ClusterDetailsVO, Long
         expunge(sc);
 
         for (Map.Entry<String, String> detail : details.entrySet()) {
+            String name = detail.getKey();
+            if (name.equalsIgnoreCase("cpu.overprovisioning.factor")) {
+                name = "cpuOvercommitRatio";
+            }
+            if (name.equalsIgnoreCase("mem.overprovisioning.factor")) {
+                name = "memoryOvercommitRatio";
+            }
             String value = detail.getValue();
             if ("password".equals(detail.getKey())) {
                 value = DBEncryptionUtil.encrypt(value);
             }
-            ClusterDetailsVO vo = new ClusterDetailsVO(clusterId, detail.getKey(), value);
+            ClusterDetailsVO vo = new ClusterDetailsVO(clusterId, name, value);
             persist(vo);
         }
         txn.commit();
@@ -115,6 +122,12 @@ public class ClusterDetailsDaoImpl extends GenericDaoBase<ClusterDetailsVO, Long
 
     @Override
     public void persist(long clusterId, String name, String value) {
+        if (name.equalsIgnoreCase("cpu.overprovisioning.factor")) {
+            name = "cpuOvercommitRatio";
+        }
+        if (name.equalsIgnoreCase("mem.overprovisioning.factor")) {
+            name = "memoryOvercommitRatio";
+        }
         TransactionLegacy txn = TransactionLegacy.currentTxn();
         txn.start();
         SearchCriteria<ClusterDetailsVO> sc = DetailSearch.create();

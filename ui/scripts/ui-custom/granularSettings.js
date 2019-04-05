@@ -41,6 +41,18 @@
                     edit: {
                         label: 'label.change.value',
                         action: actions.edit
+                    },
+                    resetvalue: {
+                        label: 'label.reset.value',
+                        messages: {
+                            confirm: function(args) {
+                                return 'message.action.reset.configuration';
+                            },
+                            notification: function(args) {
+                                return 'label.action.reset.configuration';
+                            },
+                        },
+                        action: actions.resetvalue
                     }
                 },
                 dataProvider: dataProvider
