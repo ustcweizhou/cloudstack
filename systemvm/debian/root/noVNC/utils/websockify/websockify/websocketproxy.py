@@ -108,18 +108,18 @@ Traffic Legend:
         Called after a new WebSocket connection has been established.
         """
 
-        self.key = 'default.novnc.encryption.key'
+        self.novnc_key = 'default.novnc.encryption.key'
         try:
-            arguments = decrypt(self.key.ljust(32, '\0'), self.path.lstrip('/'))
+            arguments = decrypt(self.novnc_key.ljust(32, '\0'), self.path.lstrip('/'))
             arguments, signature = arguments.split('|')
             self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
         except Exception, e:
-            arguments = decrypt(self.key[:32], self.path.lstrip('/'))
+            arguments = decrypt(self.novnc_key[:32], self.path.lstrip('/'))
             arguments, signature = arguments.split('|')
             self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
 
         # Check signature
-        if sha256(self.key+arguments).hexdigest() != signature:
+        if sha256(self.novnc_key+arguments).hexdigest() != signature:
             self.send_close()
             raise self.server.EClose('Not accepted: Invalid signature')
         # Check client ip address
