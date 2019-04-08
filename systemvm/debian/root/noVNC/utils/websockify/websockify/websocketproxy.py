@@ -37,7 +37,7 @@ except ImportError:
     from cgi import parse_qs
     from urlparse import urlparse
 
-from rijndael_cs import decrypt
+from rijndael_cs import decrypt,decrypt_cbc
 from hashlib import sha256
 from time import time
 
@@ -109,14 +109,25 @@ Traffic Legend:
         """
 
         self.novnc_key = 'default.novnc.encryption.key'
-        try:
-            arguments = decrypt(self.novnc_key.ljust(32, '\0'), self.path.lstrip('/'))
-            arguments, signature = arguments.split('|')
-            self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
-        except Exception, e:
-            arguments = decrypt(self.novnc_key[:32], self.path.lstrip('/'))
-            arguments, signature = arguments.split('|')
-            self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
+        self.novnc_iv = 'default.novnc.encryption.iv'
+        if self.novnc_iv is not None:
+            try:
+                arguments = decrypt_cbc(self.novnc_key.ljust(32, '\0'), self.novnc_iv.ljust(32, '\0'), self.path.lstrip('/'))
+                arguments, signature = arguments.split('|')
+                self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
+            except Exception, e:
+                arguments = decrypt_cbc(self.novnc_key[:32], self.novnc_iv[:32], self.path.lstrip('/'))
+                arguments, signature = arguments.split('|')
+                self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
+        else:
+            try:
+                arguments = decrypt(self.novnc_key.ljust(32, '\0'), self.path.lstrip('/'))
+                arguments, signature = arguments.split('|')
+                self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
+            except Exception, e:
+                arguments = decrypt(self.novnc_key[:32], self.path.lstrip('/'))
+                arguments, signature = arguments.split('|')
+                self.target_host, self.target_port, self.client_ip, self.timestamp, self.password = arguments.rsplit(':', 4)
 
         # Check signature
         if sha256(self.novnc_key+arguments).hexdigest() != signature:
