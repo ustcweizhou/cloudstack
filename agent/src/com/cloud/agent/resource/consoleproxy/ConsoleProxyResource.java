@@ -181,7 +181,11 @@ public class ConsoleProxyResource extends ServerResourceBase implements ServerRe
             File file = new File("/root/noVNC/utils/websockify/websockify/websocketproxy.py");
             String websockify = FileUtils.readFileToString(file);
             websockify = websockify.replaceFirst("self.novnc_key =(.*)", "self.novnc_key = '" + keyIvPair.getKey() + "'");
-            websockify = websockify.replaceFirst("self.novnc_iv =(.*)", "self.novnc_iv = '" + keyIvPair.getIV() + "'");
+            if (StringUtils.isEmpty(keyIvPair.getIV())) {
+                websockify = websockify.replaceFirst("self.novnc_iv =(.*)", "self.novnc_iv = None");
+            } else {
+                websockify = websockify.replaceFirst("self.novnc_iv =(.*)", "self.novnc_iv = '" + keyIvPair.getIV() + "'");
+            }
             FileUtils.writeStringToFile(file, websockify);
         } catch (IOException e) {
             s_logger.warn("Unable to save noVNC key/iv pair");

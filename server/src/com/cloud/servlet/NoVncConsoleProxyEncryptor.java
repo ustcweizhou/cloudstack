@@ -68,7 +68,12 @@ public class NoVncConsoleProxyEncryptor {
             String dataHash = hash(key + data.toString());
             data.append("|").append(dataHash);
 
-            String encryptedText = Hex.encodeHexString(encryptText(data.toString()));
+            String encryptedText = null;
+            if ("CBC".equalsIgnoreCase(ConsoleProxyManager.NoVncEncryptionMethod.value())) {
+                encryptedText = Hex.encodeHexString(encryptTextCBC(data.toString()));
+            } else {
+                encryptedText = Hex.encodeHexString(encryptText(data.toString()));
+            }
 
             Map<String, String> input = new HashMap<String, String>();
             if (ConsoleProxyManager.NoVncConsolePort.value() != null) {

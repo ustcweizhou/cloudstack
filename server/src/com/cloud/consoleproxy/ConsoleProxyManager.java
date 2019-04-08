@@ -38,6 +38,8 @@ public interface ConsoleProxyManager extends Manager, ConsoleProxyService {
 
     public static final ConfigKey<Integer> NoVncConsolePort = new ConfigKey<Integer>("Advanced", Integer.class, "novnc.console.port", "8080",
             "The port on console proxy vm which provides novnc console", true);
+    public static final ConfigKey<String> NoVncEncryptionMethod = new ConfigKey<String>("Advanced", String.class, "novnc.encryption.method", "ECB",
+        "The method to be used to encryption in novnc console. The value can be ECB (default) or CBC. The ConsoleProxy VM needs to be restarted if this changes.", true, ConfigKey.Scope.Global);
     public static final ConfigKey<String> NoVncEncryptionKey = new ConfigKey<String>("Hidden", String.class, "novnc.encryption.key", null,
         "The key to be used to encryption in novnc console. The ConsoleProxy VM needs to be restarted if this changes.", true, ConfigKey.Scope.Global);
     public static final ConfigKey<String> NoVncEncryptionIV = new ConfigKey<String>("Hidden", String.class, "novnc.encryption.iv", null,

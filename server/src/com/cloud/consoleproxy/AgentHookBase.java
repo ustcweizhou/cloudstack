@@ -214,7 +214,12 @@ public abstract class AgentHookBase implements AgentHook {
             cmd.setEncryptorPassword(getEncryptorPassword());
             s_logger.debug("Adding data for noVNC based console proxy");
             cmd.setCertificates(certificates);
-            KeyIVPair keyIvPair = new KeyIVPair(ConsoleProxyManager.NoVncEncryptionKey.value(), ConsoleProxyManager.NoVncEncryptionIV.value());
+            KeyIVPair keyIvPair = null;
+            if ("CBC".equalsIgnoreCase(ConsoleProxyManager.NoVncEncryptionMethod.value())) {
+                keyIvPair = new KeyIVPair(ConsoleProxyManager.NoVncEncryptionKey.value(), ConsoleProxyManager.NoVncEncryptionIV.value());
+            } else {
+                keyIvPair = new KeyIVPair(ConsoleProxyManager.NoVncEncryptionKey.value(), null);
+            }
             cmd.setKeyIVPair(keyIvPair);
 
             HostVO consoleProxyHost = findConsoleProxyHost(startupCmd);

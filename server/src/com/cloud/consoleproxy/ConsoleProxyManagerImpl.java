@@ -1763,7 +1763,7 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
 
     @Override
     public ConfigKey<?>[] getConfigKeys() {
-        return new ConfigKey<?>[] { NoVncEncryptionKey, NoVncEncryptionIV, NoVncConsolePort };
+        return new ConfigKey<?>[] { NoVncEncryptionKey, NoVncEncryptionIV, NoVncConsolePort, NoVncEncryptionMethod };
     }
 
 }
