@@ -33,7 +33,9 @@ public class StartConsoleProxyAgentHttpHandlerCommand extends Command {
     private String keystorePassword;
     @LogLevel(Log4jLevel.Off)
     private String encryptorPassword;
+    @LogLevel(Log4jLevel.Off)
     private Certificates certificates;
+    @LogLevel(Log4jLevel.Off)
     private KeyIVPair keyIvPair;
 
     public StartConsoleProxyAgentHttpHandlerCommand() {
