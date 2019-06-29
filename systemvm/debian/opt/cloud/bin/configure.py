@@ -56,16 +56,25 @@ class CsPassword(CsDataBag):
         except IOError:
             logging.debug("File %s does not exist" % self.TOKEN_FILE)
 
-        ips_cmd = "ip addr show | grep inet | awk '{print $2}'"
-        ips = CsHelper.execute(ips_cmd)
-        for ip in ips:
-            server_ip = ip.split('/')[0]
-            proc = CsProcess(['/opt/cloud/bin/passwd_server_ip.py', server_ip])
+        for interface in self.config.address().get_interfaces():
+            if interface.ip_in_subnet(vm_ip):
+                if self.config.cl.is_redundant():
+                    server_ip = interface.get_gateway()
+                    guest_ip = interface.get_ip()
+                else:
+                    server_ip = interface.get_ip()
+                break
+
+        if server_ip is not None:
+            if guest_ip is None:
+                proc = CsProcess(['/opt/cloud/bin/passwd_server_ip.py', server_ip])
+            else:
+                proc = CsProcess(['/opt/cloud/bin/passwd_server_ip.py', server_ip + "," + guest_ip])
             if proc.find():
                 update_command = 'curl --header "DomU_Request: save_password" "http://{SERVER_IP}:8080/" -F "ip={VM_IP}" -F "password={PASSWORD}" ' \
                                  '-F "token={TOKEN}" >/dev/null 2>/dev/null &'.format(SERVER_IP=server_ip, VM_IP=vm_ip, PASSWORD=password, TOKEN=token)
                 result = CsHelper.execute(update_command)
-                logging.debug("Update password server result ==> %s" % result)
+                logging.debug("Update password server on %s result ==> %s" % (server_ip, result))
 
 
 class CsAcl(CsDataBag):
