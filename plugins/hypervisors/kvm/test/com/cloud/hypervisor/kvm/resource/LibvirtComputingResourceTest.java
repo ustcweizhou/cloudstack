@@ -1280,6 +1280,11 @@ public class LibvirtComputingResourceTest {
         disks.add(diskDef);
 
         when(libvirtComputingResource.getDisks(conn, vmName)).thenReturn(disks);
+
+        final DiskTO diskTO = Mockito.mock(DiskTO.class);
+        when(vmTO.getDisks()).thenReturn(new DiskTO[]{diskTO});
+        when(diskTO.getType()).thenReturn(Volume.Type.ROOT);
+
         final Domain dm = Mockito.mock(Domain.class);
         try {
             when(conn.domainLookupByName(vmName)).thenReturn(dm);

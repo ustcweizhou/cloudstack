@@ -22,6 +22,7 @@ package com.cloud.hypervisor.kvm.resource.wrapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +62,8 @@ import org.xml.sax.SAXException;
 import com.cloud.agent.api.Answer;
 import com.cloud.agent.api.MigrateAnswer;
 import com.cloud.agent.api.MigrateCommand;
+import com.cloud.agent.api.to.DiskTO;
+import com.cloud.agent.api.to.VirtualMachineTO;
 import com.cloud.hypervisor.kvm.resource.LibvirtComputingResource;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.DiskDef;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.InterfaceDef;
@@ -68,6 +71,7 @@ import com.cloud.hypervisor.kvm.resource.MigrateKVMAsync;
 import com.cloud.hypervisor.kvm.resource.VifDriver;
 import com.cloud.resource.CommandWrapper;
 import com.cloud.resource.ResourceWrapper;
+import com.cloud.storage.Volume;
 import com.cloud.utils.Ternary;
 import com.cloud.utils.exception.CloudRuntimeException;
 import com.google.common.base.Strings;
@@ -75,6 +79,8 @@ import com.google.common.base.Strings;
 @ResourceWrapper(handles =  MigrateCommand.class)
 public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCommand, Answer, LibvirtComputingResource> {
 
+    private static final String CDROM_ELEM_END = ".iso'/>";
+    private static final String CDROM_ELEM_START = "<disk type='file' device='cdrom'>";
     private static final String GRAPHICS_ELEM_END = "/graphics>";
     private static final String GRAPHICS_ELEM_START = "<graphics";
     private static final String CONTENTS_WILDCARD = "(?s).*";
@@ -135,6 +141,17 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
             final String target = command.getDestinationIp();
             xmlDesc = dm.getXMLDesc(xmlFlag);
             xmlDesc = replaceIpForVNCInDescFile(xmlDesc, target);
+
+            // replace ISO path because iso might be stored on different secondary storage pools
+            final VirtualMachineTO vm = command.getVirtualMachine();
+            final DiskTO[] volumes = vm.getDisks();
+            for (final DiskTO volume : volumes) {
+                if (volume.getType() == Volume.Type.ISO) {
+                    String volPath = libvirtComputingResource.getVolumePath(conn, volume);
+                    xmlDesc = replaceMountPointForIsoInDescFile(xmlDesc, volPath);
+                    break;
+                }
+            }
 
             // delete the metadata of vm snapshots before migration
             vmsnapshots = libvirtComputingResource.cleanVMSnapshotMetadata(dm);
@@ -214,6 +231,9 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
             if (result.startsWith("unable to connect to server") && result.endsWith("refused")) {
                 result = String.format("Migration was refused connection to destination: %s. Please check libvirt configuration compatibility and firewall rules on the source and destination hosts.", destinationUri);
             }
+        } catch (final URISyntaxException e) {
+            s_logger.warn("URISyntaxException ", e);
+            result = e.getMessage();
         } catch (final InterruptedException e) {
             s_logger.debug("Interrupted while migrating domain: " + e.getMessage());
             result = e.getMessage();
@@ -297,6 +317,19 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
                 graphElem = graphElem.replaceAll("listen='[a-zA-Z0-9\\.]*'", "listen='" + target + "'");
                 graphElem = graphElem.replaceAll("address='[a-zA-Z0-9\\.]*'", "address='" + target + "'");
                 xmlDesc = xmlDesc.replaceAll(GRAPHICS_ELEM_START + CONTENTS_WILDCARD + GRAPHICS_ELEM_END, graphElem);
+            }
+        }
+        return xmlDesc;
+    }
+
+    String replaceMountPointForIsoInDescFile(String xmlDesc, final String volPath) {
+        final int begin = xmlDesc.indexOf(CDROM_ELEM_START);
+        if (begin >= 0) {
+            final int end = xmlDesc.lastIndexOf(CDROM_ELEM_END) + CDROM_ELEM_END.length();
+            if (end > begin) {
+                String cdromElem = xmlDesc.substring(begin, end);
+                cdromElem = cdromElem.replaceAll("source file='[a-z0-9/-]*\\.iso'", "source file='" + volPath + "'");
+                xmlDesc = xmlDesc.replaceAll(CDROM_ELEM_START + CONTENTS_WILDCARD + CDROM_ELEM_END, cdromElem);
             }
         }
         return xmlDesc;
