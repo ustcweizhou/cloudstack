@@ -65,7 +65,6 @@ function install_packages() {
     iptables-persistent \
     libtcnative-1 libssl-dev libapr1-dev \
     python-flask \
-    haproxy \
     haveged \
     radvd \
     sharutils genisoimage aria2 \
@@ -73,7 +72,7 @@ function install_packages() {
     virt-what open-vm-tools qemu-guest-agent hyperv-daemons cloud-guest-utils
 
 
-  apt-get -q -y -t stretch-backports install nftables openjdk-11-jre-headless
+  apt-get -q -y -t stretch-backports install nftables openjdk-11-jre-headless haproxy
 
   apt-get -y autoremove --purge
   apt-get clean
