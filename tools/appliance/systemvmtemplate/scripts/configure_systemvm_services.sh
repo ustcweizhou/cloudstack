@@ -123,6 +123,7 @@ function configure_services() {
   systemctl disable hyperv-daemons.hv-kvp-daemon.service
   systemctl disable hyperv-daemons.hv-vss-daemon.service
   systemctl disable qemu-guest-agent
+  systemctl disable nginx
 
   configure_apache2
   configure_strongswan
