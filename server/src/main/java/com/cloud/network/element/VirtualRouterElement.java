@@ -702,25 +702,25 @@ NetworkMigrationResponder, AggregatedCommandExecutor, RedundantResource, DnsServ
 
         // If any router is running then send save password command otherwise
         // save the password in DB
-        boolean savePasswordResult = true;
         boolean isVrRunning = false;
         for (final VirtualRouter router : routers) {
             if (router.getState() == State.Running) {
                 final boolean result = networkTopology.savePasswordToRouter(network, nic, uservm, router);
+                if (! result) {
+                    s_logger.debug(String.format("Failed to save password of vm %s to router %s", uservm.getInstanceName(), router.getInstanceName()));
+                    return false;
+                }
                 isVrRunning = true;
-                savePasswordResult = savePasswordResult && result;
             }
         }
 
         // return the result only if one of the vr is running
         if (isVrRunning) {
-            if (savePasswordResult) {
-                // Explicit password reset, while VM hasn't generated a password yet.
-                final UserVmVO userVmVO = _userVmDao.findById(vm.getId());
-                userVmVO.setUpdateParameters(false);
-                _userVmDao.update(userVmVO.getId(), userVmVO);
-            }
-            return savePasswordResult;
+            // Explicit password reset, while VM hasn't generated a password yet.
+            final UserVmVO userVmVO = _userVmDao.findById(vm.getId());
+            userVmVO.setUpdateParameters(false);
+            _userVmDao.update(userVmVO.getId(), userVmVO);
+            return true;
         }
 
         final String password = (String) uservm.getParameter(VirtualMachineProfile.Param.VmPassword);
