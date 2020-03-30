@@ -102,10 +102,29 @@
                                 $('div.overlay').remove();
                                 $(':ui-dialog').dialog('destroy');
                             });
-                        }
-                        else {
-                            cloudStack.dialog.notice({
-                                message: _l('message.migrate.instance.select.host')
+                        } else {
+                            $dataList.fadeOut(function() {
+                                action({
+                                    context: $.extend(true, {}, context, {}),
+                                    response: {
+                                        success: function(args) {
+                                            complete({
+                                                _custom: args._custom,
+                                                $item: $('<div>'),
+                                            });
+                                        },
+                                        error: function(args) {
+                                            cloudStack.dialog.notice({
+                                                message: args
+                                            });
+                                        }
+                                    }
+                                });
+                            });
+
+                            $('div.overlay').fadeOut(function() {
+                                $('div.overlay').remove();
+                                $(':ui-dialog').dialog('destroy');
                             });
                         }
                     }

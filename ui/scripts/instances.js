@@ -2478,6 +2478,26 @@
                                                 }
                                             });
                                         }
+                                    } else {
+                                        $.ajax({
+                                            url: createURL("migrateVirtualMachine&virtualmachineid=" + args.context.instances[0].id),
+                                            dataType: "json",
+                                            async: true,
+                                            success: function(json) {
+                                                var jid = json.migratevirtualmachineresponse.jobid;
+                                                args.response.success({
+                                                    _custom: {
+                                                        jobId: jid,
+                                                        getUpdatedItem: function(json) {
+                                                            return json.queryasyncjobresultresponse.jobresult.virtualmachine;
+                                                        },
+                                                        getActionFilter: function() {
+                                                            return vmActionfilter;
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        });
                                     }
                                 }
                             })
