@@ -68,6 +68,12 @@ fi
     # Create symbolic link for python
     if [ ! -f "/usr/bin/python" ]; then
         ln -s /usr/bin/python2 /usr/bin/python
+    else
+        python_version=$(/usr/bin/python -c 'import sys; print(sys.version_info[0])')
+        if [ $python_version -ne 2 ];then
+            rm /usr/bin/python
+            ln -s /usr/bin/python2 /usr/bin/python
+        fi
     fi
 
 #DEBHELPER#
