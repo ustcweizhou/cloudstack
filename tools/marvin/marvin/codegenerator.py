@@ -121,8 +121,8 @@ class CodeGenerator(object):
         self.code = self.license
         self.code += self.newline
         self.code += '"""%s"""\n' % self.cmd.desc
-        self.code += 'from baseCmd import *\n'
-        self.code += 'from baseResponse import *\n'
+        self.code += 'from .baseCmd import *\n'
+        self.code += 'from .baseResponse import *\n'
         self.code += "class %sCmd (baseCmd):\n" % self.cmd.name
         self.code += self.space
         self.code += 'typeInfo = {}\n'
