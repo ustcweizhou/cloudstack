@@ -369,7 +369,7 @@ def get_test_template(apiclient, zone_id=None, hypervisor=None, test_templates=N
         return get_template(apiclient, zone_id)
 
     if hypervisor not in test_templates.keys():
-        print "Provided hypervisor has no test template"
+        print("Provided hypervisor has no test template")
         return FAILED
 
     test_template = test_templates[hypervisor]

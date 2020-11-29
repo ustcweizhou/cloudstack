@@ -214,7 +214,7 @@ class Xunitmp(Plugin):
         try:
             self.xunitstream.append(xml)
         except Exception, e:
-            print 'xunitmultiprocess add stream len=%d,%s'%(len(xml),str(e))
+            print('xunitmultiprocess add stream len=%d,%s'%(len(xml),str(e)))
             
     def addError(self, test, err, capt=None):
         """Add error output to Xunit report.

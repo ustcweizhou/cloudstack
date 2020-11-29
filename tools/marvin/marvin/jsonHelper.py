@@ -186,7 +186,7 @@ if __name__ == "__main__":
           } ]
     } }'''
     nsp = getResultObj(result)
-    print nsp[0].id
+    print(nsp[0].id)
 
     result = '''{ "listzonesresponse" : {
     "count" : 1,
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     }
 }'''
     zones = getResultObj(result)
-    print zones[0].id
+    print(zones[0].id)
     res = authorizeSecurityGroupIngress.authorizeSecurityGroupIngressResponse()
     result = '''{
     "queryasyncjobresultresponse" : {
@@ -242,8 +242,8 @@ if __name__ == "__main__":
     }
 }'''
     asynJob = getResultObj(result, res)
-    print asynJob.jobid, repr(asynJob.jobresult)
-    print asynJob.jobresult.ingressrule[0].account
+    print(asynJob.jobid, repr(asynJob.jobresult))
+    print(asynJob.jobresult.ingressrule[0].account)
 
     result = '''{
     "queryasyncjobresultresponse" : {
@@ -256,15 +256,15 @@ due to missing parameter jobid"
     try:
         asynJob = getResultObj(result)
     except cloudstackException.CloudstackAPIException as e:
-        print e
+        print(e)
 
     result = '{ "queryasyncjobresultresponse" : {}  }'
     asynJob = getResultObj(result)
-    print asynJob
+    print(asynJob)
 
     result = '{}'
     asynJob = getResultObj(result)
-    print asynJob
+    print(asynJob)
 
     result = '''{
     "createzoneresponse" : {
@@ -280,15 +280,15 @@ due to missing parameter jobid"
 }'''
     res = createZone.createZoneResponse()
     zone = getResultObj(result, res)
-    print zone.id
+    print(zone.id)
 
     result = '{ "attachvolumeresponse" : {"jobid":24} }'
     res = attachVolume.attachVolumeResponse()
     res = getResultObj(result, res)
-    print res
+    print(res)
 
     result = '{ "listtemplatesresponse" : { } }'
-    print getResultObj(result, listTemplates.listTemplatesResponse())
+    print(getResultObj(result, listTemplates.listTemplatesResponse()))
 
     result = '''{
     "queryasyncjobresultresponse" : {
@@ -300,7 +300,7 @@ due to missing parameter jobid"
         }
     }
 }'''
-    print getResultObj(result, listTemplates.listTemplatesResponse())
+    print(getResultObj(result, listTemplates.listTemplatesResponse()))
     result = '''{
     "queryasyncjobresultresponse" : {
         "jobid":41,"jobstatus":1,"jobprocstatus":0,
@@ -381,9 +381,9 @@ due to missing parameter jobid"
 }'''
     vm = getResultObj(result,
                       deployVirtualMachine.deployVirtualMachineResponse())
-    print vm.jobresult.id
+    print(vm.jobresult.id)
 
     cmd = deployVirtualMachine.deployVirtualMachineCmd()
     responsename = cmd.__class__.__name__.replace("Cmd", "Response")
     response = getclassFromName(cmd, responsename)
-    print response.id
+    print(response.id)

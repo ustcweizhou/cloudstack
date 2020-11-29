@@ -2829,8 +2829,8 @@ class Host:
                     retries += -1
             return FAILED
         except Exception as e:
-            print "Exception Occurred Under Host.create : %s" % \
-                  GetDetailExceptionInfo(e)
+            print("Exception Occurred Under Host.create : %s" % \
+                  GetDetailExceptionInfo(e))
             return FAILED
 
     @staticmethod

@@ -389,8 +389,8 @@ class ConfigManager(object):
                 config_dict = config
         except Exception as e:
             # Will replace with log once we have logging done
-            print "\n Exception occurred under ConfigManager:__parseConfig" \
-                  " :%s", GetDetailExceptionInfo(e)
+            print("\n Exception occurred under ConfigManager:__parseConfig" \
+                  " :%s", GetDetailExceptionInfo(e))
         finally:
             return config_dict
 
@@ -417,7 +417,7 @@ class ConfigManager(object):
         @Output:Section matching inside the parsed data
         '''
         if self.__parsedCfgDict is None or section is None:
-            print "\nEither Parsed Dictionary is None or Section is None"
+            print("\nEither Parsed Dictionary is None or Section is None")
             return INVALID_INPUT
         if section is not None:
             return self.__parsedCfgDict.get(section)
@@ -931,8 +931,8 @@ def getSetupConfig(file):
         config = json.loads("\n".join(configLines))
         return jsonHelper.jsonLoader(config)
     except Exception as e:
-        print "\nException Occurred under getSetupConfig %s" % \
-              GetDetailExceptionInfo(e)
+        print("\nException Occurred under getSetupConfig %s" % \
+              GetDetailExceptionInfo(e))
 
 if __name__ == "__main__":
     parser = OptionParser()

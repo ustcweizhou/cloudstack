@@ -468,17 +468,17 @@ if __name__ == "__main__":
         try:
             os.mkdir(apiModule)
         except:
-            print "Failed to create folder %s, due to %s" % (apiModule,
-                                                             sys.exc_info())
-            print parser.print_help()
+            print("Failed to create folder %s, due to %s" % (apiModule,
+                                                             sys.exc_info()))
+            print(parser.print_help())
             exit(2)
 
     apiSpecFile = "/etc/cloud/cli/commands.xml"
     if options.spec is not None:
         apiSpecFile = options.spec
         if not os.path.exists(apiSpecFile):
-            print "the spec file %s does not exists" % apiSpecFile
-            print parser.print_help()
+            print("the spec file %s does not exists" % apiSpecFile)
+            print(parser.print_help())
             exit(1)
 
     cg = CodeGenerator(folder)
