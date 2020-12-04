@@ -36,6 +36,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.cloudstack.framework.security.keys.KeysManager;
+import org.apache.cloudstack.vm.VmConsoleTicketVO;
+import org.apache.cloudstack.vm.dao.VmConsoleTicketDao;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Component;
@@ -91,6 +93,8 @@ public class ConsoleProxyServlet extends HttpServlet {
     UserVmDetailsDao _userVmDetailsDao;
     @Inject
     KeysManager _keysMgr;
+    @Inject
+    VmConsoleTicketDao _ticketDao;
 
     static KeysManager s_keysMgr;
 
@@ -389,6 +393,7 @@ public class ConsoleProxyServlet extends HttpServlet {
         }
 
         String ticket = genAccessTicket(parsedHostInfo.first(), String.valueOf(port), sid, tag);
+        persistVmConsoleTicket(vm.getId(), ticket);
 
         ConsoleProxyPasswordBasedEncryptor encryptor = new ConsoleProxyPasswordBasedEncryptor(getEncryptorPassword());
         ConsoleProxyClientParam param = new ConsoleProxyClientParam();
@@ -458,6 +463,8 @@ public class ConsoleProxyServlet extends HttpServlet {
         String tag = vm.getUuid();
 
         String ticket = genAccessTicket(parsedHostInfo.first(), String.valueOf(port), sid, tag);
+        persistVmConsoleTicket(vm.getId(), ticket);
+
         ConsoleProxyPasswordBasedEncryptor encryptor = new ConsoleProxyPasswordBasedEncryptor(getEncryptorPassword());
         ConsoleProxyClientParam param = new ConsoleProxyClientParam();
         param.setClientHostAddress(parsedHostInfo.first());
@@ -511,7 +518,6 @@ public class ConsoleProxyServlet extends HttpServlet {
             Mac mac = Mac.getInstance("HmacSHA1");
 
             long ts = normalizedHashTime.getTime();
-            ts = ts / 60000;        // round up to 1 minute
             String secretKey = s_keysMgr.getHashKey();
 
             SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(), "HmacSHA1");
@@ -733,5 +739,9 @@ public class ConsoleProxyServlet extends HttpServlet {
             }
         }
         return sb.toString();
+    }
+
+    private void persistVmConsoleTicket(long vmId, String ticket) {
+        _ticketDao.persist(new VmConsoleTicketVO(vmId, ticket));
     }
 }

@@ -25,6 +25,9 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
@@ -39,10 +42,12 @@ import org.apache.cloudstack.framework.security.keys.KeysManager;
 import org.apache.cloudstack.framework.security.keystore.KeystoreDao;
 import org.apache.cloudstack.framework.security.keystore.KeystoreManager;
 import org.apache.cloudstack.framework.security.keystore.KeystoreVO;
+import org.apache.cloudstack.managed.context.ManagedContextRunnable;
 import org.apache.cloudstack.storage.datastore.db.PrimaryDataStoreDao;
 import org.apache.cloudstack.storage.datastore.db.StoragePoolVO;
 import org.apache.cloudstack.storage.datastore.db.TemplateDataStoreDao;
 import org.apache.cloudstack.storage.datastore.db.TemplateDataStoreVO;
+import org.apache.cloudstack.vm.dao.VmConsoleTicketDao;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.log4j.Logger;
 
@@ -115,6 +120,7 @@ import com.cloud.utils.NumbersUtil;
 import com.cloud.utils.Pair;
 import com.cloud.utils.StringUtils;
 import com.cloud.utils.component.ManagerBase;
+import com.cloud.utils.concurrency.NamedThreadFactory;
 import com.cloud.utils.db.DB;
 import com.cloud.utils.db.GlobalLock;
 import com.cloud.utils.db.QueryBuilder;
@@ -164,6 +170,8 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
     private static final int ACQUIRE_GLOBAL_LOCK_TIMEOUT_FOR_SYNC = 180; // 3 minutes
 
     private static final int STARTUP_DELAY = 60000; // 60 seconds
+    private static final int VM_CONSOLE_TICKET_TIMEOUT = 3 * 60 * 1000; // 3 minutes
+    private static final int VM_CONSOLE_TICKET_GC_INTERVAL = 600; // 10 minutes
 
     private int _consoleProxyPort = ConsoleProxyManager.DEFAULT_PROXY_VNC_PORT;
 
@@ -217,6 +225,8 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
     private VirtualMachineManager _itMgr;
     @Inject
     private IndirectAgentLB indirectAgentLB;
+    @Inject
+    private VmConsoleTicketDao _ticketDao;
 
     private ConsoleProxyListener _listener;
 
@@ -254,10 +264,12 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
     @Inject
     private KeystoreManager _ksMgr;
 
+    private ScheduledExecutorService _executor = null;
+
     public class VmBasedAgentHook extends AgentHookBase {
 
-        public VmBasedAgentHook(VMInstanceDao instanceDao, HostDao hostDao, ConfigurationDao cfgDao, KeystoreManager ksMgr, AgentManager agentMgr, KeysManager keysMgr) {
-            super(instanceDao, hostDao, cfgDao, ksMgr, agentMgr, keysMgr);
+        public VmBasedAgentHook(VMInstanceDao instanceDao, HostDao hostDao, ConfigurationDao cfgDao, KeystoreManager ksMgr, AgentManager agentMgr, KeysManager keysMgr, VmConsoleTicketDao ticketDao) {
+            super(instanceDao, hostDao, cfgDao, ksMgr, agentMgr, keysMgr, ticketDao);
         }
 
         @Override
@@ -1075,6 +1087,7 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
         if (s_logger.isInfoEnabled()) {
             s_logger.info("Start console proxy manager");
         }
+        _executor.scheduleWithFixedDelay(new VmConsoleTicketsGarbageCollector(), VM_CONSOLE_TICKET_GC_INTERVAL, VM_CONSOLE_TICKET_GC_INTERVAL, TimeUnit.SECONDS);
 
         return true;
     }
@@ -1304,7 +1317,7 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
         value = agentMgrConfigs.get("port");
         _mgmtPort = NumbersUtil.parseInt(value, 8250);
 
-        _listener = new ConsoleProxyListener(new VmBasedAgentHook(_instanceDao, _hostDao, _configDao, _ksMgr, _agentMgr, _keysMgr));
+        _listener = new ConsoleProxyListener(new VmBasedAgentHook(_instanceDao, _hostDao, _configDao, _ksMgr, _agentMgr, _keysMgr, _ticketDao));
         _agentMgr.registerForHostEvents(_listener, true, true, false);
 
         _itMgr.registerGuru(VirtualMachine.Type.ConsoleProxy, this);
@@ -1347,6 +1360,8 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
         if (_staticPublicIp != null) {
             _staticPort = NumbersUtil.parseInt(_configDao.getValue("consoleproxy.static.port"), 8443);
         }
+
+        _executor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("ConsoleProxyManager-TicketGC"));
 
         if (s_logger.isInfoEnabled()) {
             s_logger.info("Console Proxy Manager is configured.");
@@ -1758,4 +1773,19 @@ public class ConsoleProxyManagerImpl extends ManagerBase implements ConsoleProxy
         return new ConfigKey<?>[] { NoVncConsoleDefault };
     }
 
+    private class VmConsoleTicketsGarbageCollector extends ManagedContextRunnable {
+        public VmConsoleTicketsGarbageCollector() {
+        }
+        @Override
+        protected void runInContext() {
+            try {
+                s_logger.debug("Garbage Collecter for VM console tickets is running");
+                Date expiredDate = new Date(System.currentTimeMillis() - VM_CONSOLE_TICKET_TIMEOUT);
+                s_logger.debug("Removing ticket before " + expiredDate);
+                _ticketDao.removeExpiredTicket(expiredDate);
+            } catch (Exception e) {
+                s_logger.error("Caught the following Exception", e);
+            }
+        }
+    }
 }

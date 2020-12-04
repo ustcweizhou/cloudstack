@@ -30,6 +30,8 @@ import com.google.gson.GsonBuilder;
 import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.framework.security.keys.KeysManager;
 import org.apache.cloudstack.framework.security.keystore.KeystoreManager;
+import org.apache.cloudstack.vm.VmConsoleTicketVO;
+import org.apache.cloudstack.vm.dao.VmConsoleTicketDao;
 
 import com.cloud.agent.AgentManager;
 import com.cloud.agent.api.AgentControlAnswer;
@@ -69,20 +71,20 @@ public abstract class AgentHookBase implements AgentHook {
     AgentManager _agentMgr;
     KeystoreManager _ksMgr;
     KeysManager _keysMgr;
+    VmConsoleTicketDao _ticketDao;
 
-    public AgentHookBase(VMInstanceDao instanceDao, HostDao hostDao, ConfigurationDao cfgDao, KeystoreManager ksMgr, AgentManager agentMgr, KeysManager keysMgr) {
+    public AgentHookBase(VMInstanceDao instanceDao, HostDao hostDao, ConfigurationDao cfgDao, KeystoreManager ksMgr, AgentManager agentMgr, KeysManager keysMgr, VmConsoleTicketDao ticketDao) {
         _instanceDao = instanceDao;
         _hostDao = hostDao;
         _agentMgr = agentMgr;
         _configDao = cfgDao;
         _ksMgr = ksMgr;
         _keysMgr = keysMgr;
+        _ticketDao = ticketDao;
     }
 
     @Override
     public AgentControlAnswer onConsoleAccessAuthentication(ConsoleAccessAuthenticationCommand cmd) {
-        Long vmId = null;
-
         String ticketInUrl = cmd.getTicket();
         if (ticketInUrl == null) {
             s_logger.error("Access ticket could not be found, you could be running an old version of console proxy. vmId: " + cmd.getVmId());
@@ -91,31 +93,6 @@ public abstract class AgentHookBase implements AgentHook {
 
         if (s_logger.isDebugEnabled()) {
             s_logger.debug("Console authentication. Ticket in url for " + cmd.getHost() + ":" + cmd.getPort() + "-" + cmd.getVmId() + " is " + ticketInUrl);
-        }
-
-        if (!cmd.isReauthenticating()) {
-            String ticket = ConsoleProxyServlet.genAccessTicket(cmd.getHost(), cmd.getPort(), cmd.getSid(), cmd.getVmId());
-            if (s_logger.isDebugEnabled()) {
-                s_logger.debug("Console authentication. Ticket in 1 minute boundary for " + cmd.getHost() + ":" + cmd.getPort() + "-" + cmd.getVmId() + " is " + ticket);
-            }
-
-            if (!ticket.equals(ticketInUrl)) {
-                Date now = new Date();
-                // considering of minute round-up
-                String minuteEarlyTicket =
-                    ConsoleProxyServlet.genAccessTicket(cmd.getHost(), cmd.getPort(), cmd.getSid(), cmd.getVmId(), new Date(now.getTime() - 60 * 1000));
-
-                if (s_logger.isDebugEnabled()) {
-                    s_logger.debug("Console authentication. Ticket in 2-minute boundary for " + cmd.getHost() + ":" + cmd.getPort() + "-" + cmd.getVmId() + " is " +
-                        minuteEarlyTicket);
-                }
-
-                if (!minuteEarlyTicket.equals(ticketInUrl)) {
-                    s_logger.error("Access ticket expired or has been modified. vmId: " + cmd.getVmId() + "ticket in URL: " + ticketInUrl +
-                        ", tickets to check against: " + ticket + "," + minuteEarlyTicket);
-                    return new ConsoleAccessAuthenticationAnswer(cmd, false);
-                }
-            }
         }
 
         if (cmd.getVmId() != null && cmd.getVmId().isEmpty()) {
@@ -132,6 +109,20 @@ public abstract class AgentHookBase implements AgentHook {
         if (vm == null) {
             s_logger.error("Invalid vm id " + cmd.getVmId() + " sent from console access authentication");
             return new ConsoleAccessAuthenticationAnswer(cmd, false);
+        }
+
+        Long vmId = vm.getId();
+        if (!cmd.isReauthenticating()) {
+            VmConsoleTicketVO ticket = _ticketDao.findByVmIdAndTicket(vmId, ticketInUrl);
+            if (ticket == null) {
+                s_logger.error("Access ticket does not exist or expired. vmId: " + cmd.getVmId() + "ticket in URL: " + ticketInUrl);
+                return new ConsoleAccessAuthenticationAnswer(cmd, false);
+            } else if (ticket.getTakenAt() != null) {
+                s_logger.error("Access ticket has been used so it cannot be used any more. vmId: " + cmd.getVmId() + "ticket in URL: " + ticketInUrl);
+                return new ConsoleAccessAuthenticationAnswer(cmd, false);
+            }
+            ticket.setTakenAt(new Date());
+            _ticketDao.update(ticket.getId(), ticket);
         }
 
         if (vm.getHostId() == null) {

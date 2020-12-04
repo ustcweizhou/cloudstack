@@ -545,6 +545,7 @@ public class ConsoleProxy {
                 viewer.initClient(param);
 
                 connectionMap.put(clientKey, viewer);
+                s_logger.info("Added novnc viewer object " + viewer);
                 reportLoadChange = true;
             } else {
                 if (param.getClientHostPassword() == null || param.getClientHostPassword().isEmpty() ||

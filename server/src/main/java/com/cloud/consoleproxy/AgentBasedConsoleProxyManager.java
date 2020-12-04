@@ -26,6 +26,7 @@ import org.apache.log4j.Logger;
 import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.framework.security.keys.KeysManager;
 import org.apache.cloudstack.framework.security.keystore.KeystoreManager;
+import org.apache.cloudstack.vm.dao.VmConsoleTicketDao;
 
 import com.cloud.agent.AgentManager;
 import com.cloud.agent.api.GetVncPortAnswer;
@@ -74,11 +75,13 @@ public class AgentBasedConsoleProxyManager extends ManagerBase implements Consol
     ManagementServer _ms;
     @Inject
     KeysManager _keysMgr;
+    @Inject
+    VmConsoleTicketDao _ticketDao;
 
     public class AgentBasedAgentHook extends AgentHookBase {
 
-        public AgentBasedAgentHook(VMInstanceDao instanceDao, HostDao hostDao, ConfigurationDao cfgDao, KeystoreManager ksMgr, AgentManager agentMgr, KeysManager keysMgr) {
-            super(instanceDao, hostDao, cfgDao, ksMgr, agentMgr, keysMgr);
+        public AgentBasedAgentHook(VMInstanceDao instanceDao, HostDao hostDao, ConfigurationDao cfgDao, KeystoreManager ksMgr, AgentManager agentMgr, KeysManager keysMgr, VmConsoleTicketDao ticketDao) {
+            super(instanceDao, hostDao, cfgDao, ksMgr, agentMgr, keysMgr, ticketDao);
         }
 
         @Override
@@ -121,7 +124,7 @@ public class AgentBasedConsoleProxyManager extends ManagerBase implements Consol
 
         _consoleProxyUrlDomain = configs.get("consoleproxy.url.domain");
 
-        _listener = new ConsoleProxyListener(new AgentBasedAgentHook(_instanceDao, _hostDao, _configDao, _ksMgr, _agentMgr, _keysMgr));
+        _listener = new ConsoleProxyListener(new AgentBasedAgentHook(_instanceDao, _hostDao, _configDao, _ksMgr, _agentMgr, _keysMgr, _ticketDao));
         _agentMgr.registerForHostEvents(_listener, true, true, false);
 
         if (s_logger.isInfoEnabled()) {

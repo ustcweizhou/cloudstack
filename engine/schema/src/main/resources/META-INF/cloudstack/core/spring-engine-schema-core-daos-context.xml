@@ -244,6 +244,7 @@
   <bean id="vMTemplatePoolDaoImpl" class="com.cloud.storage.dao.VMTemplatePoolDaoImpl" />
   <bean id="vMTemplateZoneDaoImpl" class="com.cloud.storage.dao.VMTemplateZoneDaoImpl" />
   <bean id="virtualRouterProviderDaoImpl" class="com.cloud.network.dao.VirtualRouterProviderDaoImpl" />
+  <bean id="vmConsoleTicketDaoImpl" class="org.apache.cloudstack.vm.dao.VmConsoleTicketDaoImpl" />
   <bean id="vmRulesetLogDaoImpl" class="com.cloud.network.security.dao.VmRulesetLogDaoImpl" />
   <bean id="volumeDaoImpl" class="com.cloud.storage.dao.VolumeDaoImpl" />
   <bean id="volumeDetailsDaoImpl" class="com.cloud.storage.dao.VolumeDetailsDaoImpl" />

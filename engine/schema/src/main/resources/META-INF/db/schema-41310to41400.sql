@@ -379,3 +379,17 @@ CREATE TABLE IF NOT EXISTS `cloud`.`kubernetes_cluster_details` (
     PRIMARY KEY(`id`),
     CONSTRAINT `fk_kubernetes_cluster_details__cluster_id` FOREIGN KEY `fk_kubernetes_cluster_details__cluster_id`(`cluster_id`) REFERENCES `kubernetes_cluster`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Table for access ticket of vm console
+CREATE TABLE IF NOT EXISTS `cloud`.`vm_console_tickets` (
+  `id` bigint unsigned NOT NULL auto_increment,
+  `vm_id` bigint unsigned COMMENT 'vm id',
+  `ticket` varchar(255) COMMENT 'Access ticket of vm console',
+  `created` datetime COMMENT 'Date created',
+  `removed` datetime COMMENT 'Date removed',
+  `taken` datetime COMMENT 'Date taken',
+  PRIMARY KEY  (`id`),
+  CONSTRAINT `fk_vm_console__vm_id` FOREIGN KEY (`vm_id`) REFERENCES `vm_instance`(`id`),
+  CONSTRAINT `vm_console__ticket` UNIQUE (`ticket`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
