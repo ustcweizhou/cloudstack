@@ -529,10 +529,10 @@
             },
             ostype: {
                 type: 'select',
-                title: 'label.os.type',
+                title: 'Guest OS type',
                 listView: {
                     id: 'guestostype',
-                    label: 'label.os.type',
+                    label: 'Guest OS type',
                     actions: {
                         add: {
                             label: 'Add Guest OS type',
@@ -589,7 +589,7 @@
                             },
                             messages: {
                                 notification: function() {
-                                    return 'Added hypervisor capabilities';
+                                    return 'Added Guest OS';
                                 }
                             }
                         },
@@ -699,6 +699,239 @@
                                 dataProvider: function(args) {
                                     args.response.success({
                                         data: args.context.ostype[0]
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            guestosmapping: {
+                type: 'select',
+                title: 'Guest OS - Hypervisor mapping',
+                listView: {
+                    id: 'guestosmapping',
+                    label: 'Guest OS - Hypervisor mapping',
+                    actions: {
+                        add: {
+                            label: 'Add Guest OS mapping',
+                            createForm: {
+                                title: 'Add Guest OS mapping',
+                                fields: {
+                                    hypervisor: {
+                                        label: 'Hypervisor type',
+                                        select: function(args) {
+                                            var items = [];
+                                            items.push({
+                                                id: 'VMware',
+                                                description: 'VMware'
+                                            });
+                                            items.push({
+                                                id: 'XenServer',
+                                                description: 'XenServer'
+                                            });
+                                            args.response.success({
+                                                data: items
+                                            });
+                                        },
+                                        validation: {
+                                            required: true
+                                        },
+                                    },
+                                    version: {
+                                        label: 'Hypervisor version',
+                                        validation: {
+                                            required: true
+                                        },
+                                    },
+                                    osdisplayname: {
+                                        label: 'Guest OS',
+                                        validation: {
+                                            required: true
+                                        },
+                                    },
+                                    osnameforhypervisor: {
+                                        label: 'Guest OS identifier',
+                                        validation: {
+                                            required: true
+                                        },
+                                    }
+                                }
+                            },
+                            action: function(args) {
+                            },
+                            messages: {
+                                notification: function() {
+                                    return 'Added Guest OS mapping';
+                                }
+                            }
+                        },
+                        // Copy multiple mappings from guest os or hypervisor version
+                        copyMulti: {
+                            label: 'label.archive.events',
+                            isHeader: true,
+                            addRow: false,
+                            isMultiSelectAction: true,
+                            messages: {
+                                confirm: function(args) {
+                                    return 'message.confirm.archive.selected.events';
+                                },
+                                notification: function(args) {
+                                    return 'label.archive.events';
+                                }
+                            },
+                            action: function(args) {
+                                var events = args.context.events;
+
+                                $.ajax({
+                                    url: createURL("archiveEvents"),
+                                    data: {
+                                        ids: $(events).map(function(index, event) {
+                                            return event.id;
+                                        }).toArray().join(',')
+                                    },
+                                    success: function(data) {
+                                        args.response.success();
+                                        $(window).trigger('cloudStack.fullRefresh');
+                                    },
+                                    error:function(data) {
+                                        args.response.error(parseXMLHttpResponse(data));
+                                    }
+                                });
+                            }
+                        }
+                    },
+
+                    fields: {
+                        hypervisor: {
+                            label: 'label.hypervisor'
+                        },
+                        hypervisorversion: {
+                            label: 'Hypervisor version'
+                        },
+                        osdisplayname: {
+                            label: 'Guest OS'
+                        },
+                        isuserdefined: {
+                            label: 'User defined',
+                            converter: function(booleanValue) {
+                                if (booleanValue == "true")
+                                    return "Yes"
+                                else if (booleanValue == "false")
+                                    return "No";
+                            }
+                        }
+                    },
+                    advSearchFields: {
+                        hypervisor: {
+                            label: 'label.hypervisor'
+                        },
+                        hypervisorversion: {
+                            label: 'Hypervisor version'
+                        },
+                        keyword: {
+                            label: 'label.name'
+                        }
+                    },
+                    dataProvider: function(args) {
+                        var data = {};
+                        listViewDataProvider(args, data);
+
+                        $.ajax({
+                            url: createURL('listGuestOsMapping'),
+                            data: data,
+                            success: function(json) {
+                                var items = json.listguestosmappingresponse.guestosmapping;
+                                args.response.success({
+                                    data: items
+                                });
+                            },
+                            error: function(data) {
+                                args.response.error(parseXMLHttpResponse(data));
+                            }
+                        });
+                    },
+
+                    detailView: {
+                        name: 'label.details',
+                        actions: {
+                            remove: {
+                                label: 'Remove Guest OS mapping',
+                                messages: {
+                                    notification: function(args) {
+                                        return 'Remove Guest OS mapping';
+                                    },
+                                    confirm: function() {
+                                        return 'Remove Guest OS mapping';
+                                    }
+                                },
+                                action: function(args) {
+                                    $.ajax({
+                                        success: function(json) {
+                                            args.response.success();
+                                        }
+                                    });
+                                    $(window).trigger('cloudStack.fullRefresh');
+                                }
+                            },
+                            edit: {
+                                label: 'label.edit',
+                                action: function(args) {
+                                    var data = {
+                                        id: args.context.ostype[0].id,
+                                        osnameforhypervisor: args.data.osnameforhypervisor
+                                    };
+
+                                    $.ajax({
+                                        url: createURL('updateGuestOsMapping'),
+                                        data: data,
+                                        success: function(json) {
+                                            var item = json.updateguestosmappingresponse['null'];
+                                            args.response.success({
+                                                data: item
+                                            });
+                                        },
+                                        error: function(data) {
+                                            args.response.error(parseXMLHttpResponse(data));
+                                        }
+                                    });
+                                }
+                            }
+                        },
+
+                        tabs: {
+                            details: {
+                                title: 'label.details',
+                                fields: [{
+                                    id: {
+                                        label: 'label.id'
+                                    },
+                                    hypervisor: {
+                                        label: 'label.hypervisor'
+                                    },
+                                    hypervisorversion: {
+                                        label: 'Hypervisor version'
+                                    },
+                                    osdisplayname: {
+                                        label: 'Guest OS'
+                                    },
+                                    osnameforhypervisor: {
+                                        label: 'Guest OS identifier',
+                                        isEditable: true
+                                    },
+                                    isuserdefined: {
+                                        label: 'User defined',
+                                        converter: function(booleanValue) {
+                                            if (booleanValue == "true")
+                                                return "Yes"
+                                            else if (booleanValue == "false")
+                                                return "No";
+                                        }
+                                    }
+                                }],
+                                dataProvider: function(args) {
+                                    args.response.success({
+                                        data: args.context.guestosmapping[0]
                                     });
                                 }
                             }
