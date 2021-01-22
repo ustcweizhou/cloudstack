@@ -35,6 +35,10 @@ public class GuestOSResponse extends BaseResponse {
     @Param(description = "the ID of the OS category")
     private String osCategoryId;
 
+    @SerializedName("oscategoryname")
+    @Param(description = "the ID of the OS category")
+    private String osCategoryName;
+
     @SerializedName(ApiConstants.DESCRIPTION)
     @Param(description = "the name/description of the OS type")
     private String description;
@@ -57,6 +61,14 @@ public class GuestOSResponse extends BaseResponse {
 
     public void setOsCategoryId(String osCategoryId) {
         this.osCategoryId = osCategoryId;
+    }
+
+    public String getOsCategoryName() {
+        return osCategoryName;
+    }
+
+    public void setOsCategoryName(String osCategoryName) {
+        this.osCategoryName = osCategoryName;
     }
 
     public String getDescription() {

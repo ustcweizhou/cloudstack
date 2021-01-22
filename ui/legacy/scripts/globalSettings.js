@@ -526,7 +526,186 @@
                         }
                     }
                 }
-            }
+            },
+            ostype: {
+                type: 'select',
+                title: 'label.os.type',
+                listView: {
+                    id: 'guestostype',
+                    label: 'label.os.type',
+                    actions: {
+                        add: {
+                            label: 'Add Guest OS type',
+                            createForm: {
+                                title: 'Add Guest OS type',
+                                fields: {
+                                    oscategoryid: {
+                                        label: 'Guest OS Category',
+                                        select: function(args) {
+                                            var items = [];
+                                            items.push({
+                                                id: 'CentOS',
+                                                description: 'CentOS'
+                                            });
+                                            items.push({
+                                                id: 'Debian',
+                                                description: 'Debian'
+                                            });
+                                            items.push({
+                                                id: 'RedHat',
+                                                description: 'RedHat'
+                                            });
+                                            items.push({
+                                                id: 'Ubuntu',
+                                                description: 'Ubuntu'
+                                            });
+                                            items.push({
+                                                id: 'Windows',
+                                                description: 'Windows'
+                                            });
+                                            args.response.success({
+                                                data: items
+                                            });
+                                        },
+                                        validation: {
+                                            required: true
+                                        },
+                                    },
+                                    name: {
+                                        label: 'Guest OS name',
+                                        validation: {
+                                            required: true
+                                        },
+                                    },
+                                    source: {
+                                        label: 'Source guest OS name',
+                                        validation: {
+                                            required: true
+                                        },
+                                    }
+                                }
+                            },
+                            action: function(args) {
+                            },
+                            messages: {
+                                notification: function() {
+                                    return 'Added hypervisor capabilities';
+                                }
+                            }
+                        },
+                    },
+                    fields: {
+                        description: {
+                            label: 'label.name'
+                        },
+                        isuserdefined: {
+                            label: 'User defined',
+                            converter: cloudStack.converters.toBooleanText
+                        },
+                        oscategoryname: {
+                            label: 'Guest OS Category'
+                        }
+                    },
+                    advSearchFields: {
+                        keyword: {
+                            label: 'label.name'
+                        }
+                    },
+                    dataProvider: function(args) {
+                        var data = {};
+                        listViewDataProvider(args, data);
+
+                        $.ajax({
+                            url: createURL('listOsTypes'),
+                            data: data,
+                            success: function(json) {
+                                var items = json.listostypesresponse.ostype;
+                                args.response.success({
+                                    data: items
+                                });
+                            },
+                            error: function(data) {
+                                args.response.error(parseXMLHttpResponse(data));
+                            }
+                        });
+                    },
+
+                    detailView: {
+                        name: 'label.details',
+                        actions: {
+                            remove: {
+                                label: 'Remove Guest OS',
+                                messages: {
+                                    notification: function(args) {
+                                        return 'Remove Guest OS';
+                                    },
+                                    confirm: function() {
+                                        return 'Remove Guest OS';
+                                    }
+                                },
+                                action: function(args) {
+                                    $.ajax({
+                                        success: function(json) {
+                                            args.response.success();
+                                        }
+                                    });
+                                    $(window).trigger('cloudStack.fullRefresh');
+                                }
+                            },
+                            edit: {
+                                label: 'label.edit',
+                                action: function(args) {
+                                    var data = {
+                                        id: args.context.ostype[0].id,
+                                        osdisplayname: args.data.description
+                                    };
+
+                                    $.ajax({
+                                        url: createURL('updateGuestOs'),
+                                        data: data,
+                                        success: function(json) {
+                                            var item = json.updateguestosresponse['null'];
+                                            args.response.success({
+                                                data: item
+                                            });
+                                        },
+                                        error: function(data) {
+                                            args.response.error(parseXMLHttpResponse(data));
+                                        }
+                                    });
+                                }
+                            }
+                        },
+
+                        tabs: {
+                            details: {
+                                title: 'label.details',
+                                fields: [{
+                                    id: {
+                                        label: 'label.id'
+                                    },
+                                    description: {
+                                        label: 'label.name',
+                                        isEditable: true
+                                    },
+                                    isuserdefined: {
+                                        label: 'User defined',
+                                        converter: cloudStack.converters.toBooleanText
+                                    },
+                                    oscategoryname: {
+                                        label: 'Guest OS Category'
+                                    }
+                                }],
+                                dataProvider: function(args) {
+                                    args.response.success({
+                                        data: args.context.ostype[0]
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            },
         }
     };
 })(cloudStack);
