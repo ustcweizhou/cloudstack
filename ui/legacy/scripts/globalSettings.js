@@ -767,37 +767,54 @@
                             }
                         },
                         // Copy multiple mappings from guest os or hypervisor version
-                        copyMulti: {
-                            label: 'label.archive.events',
+                        copy: {
+                            label: 'Copy Guest OS mapping',
                             isHeader: true,
                             addRow: false,
-                            isMultiSelectAction: true,
                             messages: {
                                 confirm: function(args) {
-                                    return 'message.confirm.archive.selected.events';
+                                    return 'Copy Guest OS mapping';
                                 },
                                 notification: function(args) {
-                                    return 'label.archive.events';
+                                    return 'Copy Guest OS mapping';
+                                }
+                            },
+                            createForm: {
+                                title: 'Copy Guest OS mapping',
+                                desc: 'Copy all guest OS mapping from specific hypervisor version or guest OS',
+                                fields: {
+                                    hypervisor: {
+                                        label: 'Hypervisor type',
+                                        select: function(args) {
+                                            var items = [];
+                                            items.push({
+                                                id: 'VMware',
+                                                description: 'VMware'
+                                            });
+                                            items.push({
+                                                id: 'XenServer',
+                                                description: 'XenServer'
+                                            });
+                                            args.response.success({
+                                                data: items
+                                            });
+                                        },
+                                    },
+                                    hypervisorversion: {
+                                        label: 'Hypervisor version'
+                                    },
+                                    sourcehypervisorversion: {
+                                        label: 'Source hypervisor version'
+                                    },
+                                    osdisplayname: {
+                                        label: 'Guest OS'
+                                    },
+                                    sourceguestos: {
+                                        label: 'Source guest OS'
+                                    }
                                 }
                             },
                             action: function(args) {
-                                var events = args.context.events;
-
-                                $.ajax({
-                                    url: createURL("archiveEvents"),
-                                    data: {
-                                        ids: $(events).map(function(index, event) {
-                                            return event.id;
-                                        }).toArray().join(',')
-                                    },
-                                    success: function(data) {
-                                        args.response.success();
-                                        $(window).trigger('cloudStack.fullRefresh');
-                                    },
-                                    error:function(data) {
-                                        args.response.error(parseXMLHttpResponse(data));
-                                    }
-                                });
                             }
                         }
                     },
