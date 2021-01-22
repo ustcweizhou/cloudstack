@@ -373,6 +373,55 @@
                 listView: {
                     id: 'hypervisorCapabilities',
                     label: 'label.hypervisor.capabilities',
+                    actions: {
+                        add: {
+                            label: 'Add hypervisor capabilities',
+                            createForm: {
+                                title: 'Add hypervisor capabilities',
+                                fields: {
+                                    hypervisor: {
+                                        label: 'Hypervisor type',
+                                        select: function(args) {
+                                            var items = [];
+                                            items.push({
+                                                id: 'VMware',
+                                                description: 'VMware'
+                                            });
+                                            items.push({
+                                                id: 'XenServer',
+                                                description: 'XenServer'
+                                            });
+                                            args.response.success({
+                                                data: items
+                                            });
+                                        },
+                                        validation: {
+                                            required: true
+                                        },
+                                    },
+                                    version: {
+                                        label: 'Hypervisor version',
+                                        validation: {
+                                            required: true
+                                        },
+                                    },
+                                    source: {
+                                        label: 'Source hypervisor version',
+                                        validation: {
+                                            required: true
+                                        },
+                                    }
+                                }
+                            },
+                            action: function(args) {
+                            },
+                            messages: {
+                                notification: function() {
+                                    return 'Added hypervisor capabilities';
+                                }
+                            }
+                        },
+                    },
                     fields: {
                         hypervisor: {
                             label: 'label.hypervisor'
@@ -406,6 +455,25 @@
                     detailView: {
                         name: 'label.details',
                         actions: {
+                            remove: {
+                                label: 'Remove hypervisor capabilities',
+                                messages: {
+                                    notification: function(args) {
+                                        return 'Remove hypervisor capabilities';
+                                    },
+                                    confirm: function() {
+                                        return 'Remove hypervisor capabilities';
+                                    }
+                                },
+                                action: function(args) {
+                                    $.ajax({
+                                        success: function(json) {
+                                            args.response.success();
+                                        }
+                                    });
+                                    $(window).trigger('cloudStack.fullRefresh');
+                                }
+                            },
                             edit: {
                                 label: 'label.edit',
                                 action: function(args) {
