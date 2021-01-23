@@ -60,6 +60,9 @@ public class GuestOSHypervisorVO implements GuestOSHypervisor {
     @Column(name = "is_user_defined")
     private boolean isUserDefined;
 
+    @Column(name = "display", updatable = true, nullable = false)
+    protected boolean display = true;
+
     @Override
     public long getId() {
         return id;
@@ -131,5 +134,14 @@ public class GuestOSHypervisorVO implements GuestOSHypervisor {
 
     public void setIsUserDefined(boolean isUserDefined) {
         this.isUserDefined = isUserDefined;
+    }
+
+    public void setDisplay(final boolean display) {
+        this.display = display;
+    }
+
+    @Override
+    public boolean isDisplay() {
+        return display;
     }
 }

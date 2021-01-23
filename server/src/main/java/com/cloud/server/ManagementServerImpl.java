@@ -2182,6 +2182,8 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
         final Long osTypeId = cmd.getOsTypeId();
         final String hypervisor = cmd.getHypervisor();
         final String hypervisorVersion = cmd.getHypervisorVersion();
+        final String keyword = cmd.getKeyword();
+        final Boolean forDisplay = cmd.getDisplay();
 
         //throw exception if hypervisor name is not passed, but version is
         if (hypervisorVersion != null && (hypervisor == null || hypervisor.isEmpty())) {
@@ -2204,6 +2206,14 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
 
         if (hypervisorVersion != null) {
             sc.addAnd("hypervisorVersion", SearchCriteria.Op.EQ, hypervisorVersion);
+        }
+
+        if (keyword != null) {
+            sc.addAnd("guestOsName", SearchCriteria.Op.LIKE, "%" + keyword + "%");
+        }
+
+        if (forDisplay != null) {
+            sc.addAnd("display", SearchCriteria.Op.EQ, forDisplay);
         }
 
         final Pair<List<GuestOSHypervisorVO>, Integer> result = _guestOSHypervisorDao.searchAndCount(sc, searchFilter);

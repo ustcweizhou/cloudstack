@@ -3284,6 +3284,7 @@ public class ApiResponseHelper implements ResponseGenerator {
             response.setOsStdName(guestOs.getDisplayName());
             response.setOsTypeId(guestOs.getUuid());
         }
+        response.setForDisplay(guestOSHypervisor.isDisplay());
 
         response.setObjectName("guestosmapping");
         return response;

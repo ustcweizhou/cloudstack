@@ -55,6 +55,9 @@ public class ListGuestOsMappingCmd extends BaseListCmd {
     @Parameter(name = ApiConstants.HYPERVISOR_VERSION, type = CommandType.STRING, required = false, description = "list Guest OS mapping by hypervisor version. Must be used with hypervisor parameter")
     private String hypervisorVersion;
 
+    @Parameter(name = ApiConstants.FOR_DISPLAY, type = CommandType.BOOLEAN, description = "list resources by display flag; only ROOT admin is eligible to pass this parameter")
+    private Boolean display;
+
     /////////////////////////////////////////////////////
     /////////////////// Accessors ///////////////////////
     /////////////////////////////////////////////////////
@@ -73,6 +76,13 @@ public class ListGuestOsMappingCmd extends BaseListCmd {
 
     public String getHypervisorVersion() {
         return hypervisorVersion;
+    }
+
+    public Boolean getDisplay() {
+        if (display != null) {
+            return display;
+        }
+        return true;
     }
 
     /////////////////////////////////////////////////////

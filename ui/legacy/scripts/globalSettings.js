@@ -712,9 +712,17 @@
                 listView: {
                     id: 'guestosmapping',
                     label: 'Guest OS - Hypervisor mapping',
+                    filters: {
+                        display: {
+                            label: 'Visible to end user'
+                        },
+                        hidden: {
+                            label: 'Not visible to end user'
+                        }
+                    },
                     actions: {
                         add: {
-                            label: 'Add Guest OS mapping',
+                            label: 'Add mapping',
                             createForm: {
                                 title: 'Add Guest OS mapping',
                                 fields: {
@@ -768,7 +776,7 @@
                         },
                         // Copy multiple mappings from guest os or hypervisor version
                         copy: {
-                            label: 'Copy Guest OS mapping',
+                            label: 'Copy mappings',
                             isHeader: true,
                             addRow: false,
                             messages: {
@@ -816,6 +824,81 @@
                             },
                             action: function(args) {
                             }
+                        },
+                        // update multiple mappings from guest os or hypervisor version
+                        update: {
+                            label: 'Update mappings',
+                            isHeader: true,
+                            addRow: false,
+                            messages: {
+                                confirm: function(args) {
+                                    return 'Update Guest OS mappings';
+                                },
+                                notification: function(args) {
+                                    return 'Update Guest OS mappings';
+                                }
+                            },
+                            createForm: {
+                                title: 'Update Guest OS mappings',
+                                desc: 'Update guest OS mappings by specific hypervisor version and/or guest OS type.',
+                                fields: {
+                                    hypervisor: {
+                                        label: 'Hypervisor type',
+                                        select: function(args) {
+                                            var items = [];
+                                            items.push({
+                                                id: 'VMware',
+                                                description: 'VMware'
+                                            });
+                                            items.push({
+                                                id: 'XenServer',
+                                                description: 'XenServer'
+                                            });
+                                            items.push({
+                                                id: 'KVM',
+                                                description: 'KVM'
+                                            });
+                                            args.response.success({
+                                                data: items
+                                            });
+                                        },
+                                        validation: {
+                                            required: true
+                                        }
+                                    },
+                                    hypervisorversion: {
+                                        label: 'Hypervisor version',
+                                        validation: {
+                                            required: true
+                                        }
+                                    },
+                                    osdisplayname: {
+                                        label: 'Guest OS',
+                                        validation: {
+                                            required: true
+                                        }
+                                    },
+                                    fordisplay: {
+                                        label: 'Visible to end user',
+                                        select: function(args) {
+                                            var items = [];
+                                            items.push({
+                                                id: 'true',
+                                                description: 'Yes'
+                                            });
+                                            items.push({
+                                                id: 'false',
+                                                description: 'No'
+                                            });
+                                            args.response.success({
+                                                data: items
+                                            });
+                                        },
+                                    }
+                                }
+                            },
+                            action: function(args) {
+                            }
                         }
                     },
 
@@ -829,6 +912,10 @@
                         osdisplayname: {
                             label: 'Guest OS'
                         },
+                        fordisplay: {
+                            label: 'Visible to end user',
+                            converter: cloudStack.converters.toBooleanText
+                        },
                         isuserdefined: {
                             label: 'User defined',
                             converter: function(booleanValue) {
@@ -841,10 +928,28 @@
                     },
                     advSearchFields: {
                         hypervisor: {
-                            label: 'label.hypervisor'
+                            label: 'label.hypervisor',
+                            select: function(args) {
+                                var items = [];
+                                items.push({
+                                    id: 'VMware',
+                                    description: 'VMware'
+                                });
+                                items.push({
+                                    id: 'XenServer',
+                                    description: 'XenServer'
+                                });
+                                items.push({
+                                    id: 'KVM',
+                                    description: 'KVM'
+                                });
+                                args.response.success({
+                                    data: items
+                                });
+                            }
                         },
                         hypervisorversion: {
-                            label: 'Hypervisor version'
+                            label: 'Version'
                         },
                         keyword: {
                             label: 'label.name'
@@ -853,6 +958,23 @@
                     dataProvider: function(args) {
                         var data = {};
                         listViewDataProvider(args, data);
+
+                        if (args.filterBy != null) { //filter dropdown
+                            if (args.filterBy.kind != null) {
+                                switch (args.filterBy.kind) {
+                                    case "display":
+                                        $.extend(data, {
+                                            fordisplay: 'true'
+                                        });
+                                        break;
+                                    case "hidden":
+                                        $.extend(data, {
+                                            fordisplay: 'false'
+                                        });
+                                        break;
+                                }
+                            }
+                        }
 
                         $.ajax({
                             url: createURL('listGuestOsMapping'),
@@ -935,6 +1057,25 @@
                                     osnameforhypervisor: {
                                         label: 'Guest OS identifier',
                                         isEditable: true
+                                    },
+                                    fordisplay: {
+                                        label: 'Visible to end user',
+                                        isEditable: true,
+                                        select: function(args) {
+                                            var items = [];
+                                            items.push({
+                                                id: 'true',
+                                                description: 'Yes'
+                                            });
+                                            items.push({
+                                                id: 'false',
+                                                description: 'No'
+                                            });
+                                            args.response.success({
+                                                data: items
+                                            });
+                                        },
+                                        converter: cloudStack.converters.toBooleanText
                                     },
                                     isuserdefined: {
                                         label: 'User defined',

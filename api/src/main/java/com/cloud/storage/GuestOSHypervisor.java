@@ -37,4 +37,6 @@ public interface GuestOSHypervisor extends InternalIdentity {
     Date getCreated();
 
     boolean getIsUserDefined();
+
+    boolean isDisplay();
 }

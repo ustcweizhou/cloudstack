@@ -56,6 +56,10 @@ public class GuestOsMappingResponse extends BaseResponse {
     @Param(description = "is the mapping user defined")
     private String isUserDefined;
 
+    @SerializedName(ApiConstants.FOR_DISPLAY)
+    @Param(description = "is the mapping visible to end user")
+    private Boolean forDisplay;
+
     public String getIsUserDefined() {
         return isUserDefined;
     }
@@ -110,5 +114,9 @@ public class GuestOsMappingResponse extends BaseResponse {
 
     public void setOsNameForHypervisor(String osNameForHypervisor) {
         this.osNameForHypervisor = osNameForHypervisor;
+    }
+
+    public void setForDisplay(final Boolean forDisplay) {
+        this.forDisplay = forDisplay;
     }
 }
