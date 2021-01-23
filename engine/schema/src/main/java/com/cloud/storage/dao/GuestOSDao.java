@@ -16,11 +16,15 @@
 // under the License.
 package com.cloud.storage.dao;
 
+import java.util.List;
+
 import com.cloud.storage.GuestOSVO;
 import com.cloud.utils.db.GenericDao;
 
 public interface GuestOSDao extends GenericDao<GuestOSVO, Long> {
 
     GuestOSVO listByDisplayName(String displayName);
+
+    List<GuestOSVO> listByIdsAndHypervisors(List<Long> guestOSIds, List<String> hypervisors);
 
 }

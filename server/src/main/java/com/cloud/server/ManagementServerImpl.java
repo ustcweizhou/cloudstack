@@ -2127,6 +2127,8 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
         final Long osCategoryId = cmd.getOsCategoryId();
         final String description = cmd.getDescription();
         final String keyword = cmd.getKeyword();
+        final String hypervisor = cmd.getHypervisor();
+        final Long zoneId = cmd.getZoneId();
 
         final SearchCriteria<GuestOSVO> sc = _guestOSDao.createSearchCriteria();
 
@@ -2147,7 +2149,30 @@ public class ManagementServerImpl extends ManagerBase implements ManagementServe
         }
 
         final Pair<List<GuestOSVO>, Integer> result = _guestOSDao.searchAndCount(sc, searchFilter);
-        return new Pair<List<? extends GuestOS>, Integer>(result.first(), result.second());
+        Integer count = result.second();
+        if (count.intValue() == 0) {
+            return new Pair<List<? extends GuestOS>, Integer>(result.first(), result.second());
+        }
+        List<GuestOSVO> guestOSes = result.first();
+
+        List<String> hypervisors = new ArrayList<String>();
+        if (zoneId != null) {
+            hypervisors.addAll(getHypervisors(zoneId));
+            if (hypervisors.size() == 0
+                    || (hypervisor != null && ! hypervisors.contains(hypervisor))) {
+                return new Pair<List<? extends GuestOS>, Integer>(new ArrayList<GuestOSVO>(), count);
+            }
+        } else if (hypervisor != null) {
+            hypervisors.add(hypervisor);
+        } else {
+            return new Pair<List<? extends GuestOS>, Integer>(guestOSes, count);
+        }
+        List<Long> guestOSIds = new ArrayList<Long>();
+        int i = 0;
+        for (GuestOSVO guestOS : guestOSes) {
+            guestOSIds.add(guestOS.getId());
+        }
+        return new Pair<List<? extends GuestOS>, Integer>(_guestOSDao.listByIdsAndHypervisors(guestOSIds, hypervisors), count);
     }
 
     @Override

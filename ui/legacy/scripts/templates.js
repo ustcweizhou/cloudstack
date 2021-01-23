@@ -538,9 +538,10 @@
                                     osTypeId: {
                                         label: 'label.os.type',
                                         docID: 'helpRegisterTemplateOSType',
+                                        dependsOn: 'zone',
                                         select: function(args) {
                                             $.ajax({
-                                                url: createURL("listOsTypes"),
+                                                url: createURL("listOsTypes&hypervisor=" + args.hypervisor),
                                                 dataType: "json",
                                                 async: true,
                                                 success: function(json) {
@@ -2807,14 +2808,14 @@
                                     osTypeId: {
                                         label: 'label.os.type',
                                         docID: 'helpRegisterISOOSType',
-                                        dependsOn: 'isBootable',
+                                        dependsOn: ['isBootable', 'zone'],
                                         isHidden: false,
                                         validation: {
                                             required: true
                                         },
                                         select: function(args) {
                                             $.ajax({
-                                                url: createURL("listOsTypes"),
+                                                url: createURL("listOsTypes&zoneId=" + args.zone),
                                                 dataType: "json",
                                                 async: true,
                                                 success: function(json) {

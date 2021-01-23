@@ -29,6 +29,7 @@ import org.apache.cloudstack.api.command.user.iso.ListIsosCmd;
 import org.apache.cloudstack.api.response.GuestOSCategoryResponse;
 import org.apache.cloudstack.api.response.GuestOSResponse;
 import org.apache.cloudstack.api.response.ListResponse;
+import org.apache.cloudstack.api.response.ZoneResponse;
 
 import com.cloud.storage.GuestOS;
 import com.cloud.utils.Pair;
@@ -53,6 +54,12 @@ public class ListGuestOsCmd extends BaseListCmd {
     @Parameter(name = ApiConstants.DESCRIPTION, type = CommandType.STRING, description = "list os by description", since = "3.0.1")
     private String description;
 
+    @Parameter(name = ApiConstants.ZONE_ID, type = CommandType.UUID, entityType = ZoneResponse.class, description = "list templates by zoneId")
+    private Long zoneId;
+
+    @Parameter(name = ApiConstants.HYPERVISOR, type = CommandType.STRING, description = "the hypervisor for which to restrict the search")
+    private String hypervisor;
+
     /////////////////////////////////////////////////////
     /////////////////// Accessors ///////////////////////
     /////////////////////////////////////////////////////
@@ -67,6 +74,14 @@ public class ListGuestOsCmd extends BaseListCmd {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getHypervisor() {
+        return hypervisor;
+    }
+
+    public Long getZoneId() {
+        return zoneId;
     }
 
     /////////////////////////////////////////////////////

@@ -16,10 +16,16 @@
 // under the License.
 package com.cloud.storage.dao;
 
+import java.util.List;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 
 import org.springframework.stereotype.Component;
 
+import com.cloud.storage.GuestOSHypervisorVO;
 import com.cloud.storage.GuestOSVO;
+import com.cloud.utils.db.JoinBuilder.JoinType;
 import com.cloud.utils.db.GenericDaoBase;
 import com.cloud.utils.db.SearchBuilder;
 import com.cloud.utils.db.SearchCriteria;
@@ -27,12 +33,30 @@ import com.cloud.utils.db.SearchCriteria;
 @Component
 public class GuestOSDaoImpl extends GenericDaoBase<GuestOSVO, Long> implements GuestOSDao {
 
-    protected final SearchBuilder<GuestOSVO> Search;
+    @Inject
+    private GuestOSHypervisorDao guestOSHypervisorDao;
+
+    protected SearchBuilder<GuestOSVO> Search;
+    private SearchBuilder<GuestOSVO> ListByIdsAndHypervisors;
 
     protected GuestOSDaoImpl() {
+    }
+
+    @PostConstruct
+    protected void init() {
         Search = createSearchBuilder();
         Search.and("display_name", Search.entity().getDisplayName(), SearchCriteria.Op.EQ);
         Search.done();
+
+        SearchBuilder<GuestOSHypervisorVO> guestOsMapping = guestOSHypervisorDao.createSearchBuilder();
+        guestOsMapping.and("display", guestOsMapping.entity().isDisplay(), SearchCriteria.Op.EQ);
+        guestOsMapping.and("hypervisor", guestOsMapping.entity().getHypervisorType(), SearchCriteria.Op.IN);
+
+        ListByIdsAndHypervisors = createSearchBuilder();
+        ListByIdsAndHypervisors.groupBy(ListByIdsAndHypervisors.entity().getId());
+        ListByIdsAndHypervisors.and("ids", ListByIdsAndHypervisors.entity().getId(), SearchCriteria.Op.IN);
+        ListByIdsAndHypervisors.join("guestOsMapping", guestOsMapping, ListByIdsAndHypervisors.entity().getId(), guestOsMapping.entity().getGuestOsId(), JoinType.INNER);
+        ListByIdsAndHypervisors.done();
     }
 
     @Override
@@ -42,4 +66,12 @@ public class GuestOSDaoImpl extends GenericDaoBase<GuestOSVO, Long> implements G
         return findOneBy(sc);
     }
 
+    @Override
+    public List<GuestOSVO> listByIdsAndHypervisors(List<Long> guestOSIds, List<String> hypervisors) {
+        SearchCriteria<GuestOSVO> sc = ListByIdsAndHypervisors.create();
+        sc.setParameters("ids", guestOSIds.toArray(new Object[guestOSIds.size()]));
+        sc.setJoinParameters("guestOsMapping", "hypervisor", hypervisors.toArray(new Object[hypervisors.size()]));
+        sc.setJoinParameters("guestOsMapping", "display", 1);
+        return listBy(sc);
+    }
 }
