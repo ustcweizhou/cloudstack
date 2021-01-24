@@ -538,6 +538,7 @@
                             label: 'Add Guest OS type',
                             createForm: {
                                 title: 'Add Guest OS type',
+                                desc: 'Add a Guest OS type. The details will be copied from Source Guest OS.',
                                 fields: {
                                     oscategoryid: {
                                         label: 'Guest OS Category',
@@ -725,6 +726,7 @@
                             label: 'Add mapping',
                             createForm: {
                                 title: 'Add Guest OS mapping',
+                                desc: 'Add a guest OS name to hypervisor OS name mapping. Please input correct Guest OS identifier for hypervisor.',
                                 fields: {
                                     hypervisor: {
                                         label: 'Hypervisor type',
@@ -789,7 +791,7 @@
                             },
                             createForm: {
                                 title: 'Copy Guest OS mapping',
-                                desc: 'Copy all guest OS mapping from specific hypervisor version or guest OS',
+                                desc: 'Copy all guest OS mapping from specific hypervisor version or guest OS. Please input one of source hypervisor version and source guest os.',
                                 fields: {
                                     hypervisor: {
                                         label: 'Hypervisor type',
@@ -807,15 +809,24 @@
                                                 data: items
                                             });
                                         },
+                                        validation: {
+                                            required: true
+                                        },
                                     },
                                     hypervisorversion: {
-                                        label: 'Hypervisor version'
+                                        label: 'Hypervisor version',
+                                        validation: {
+                                            required: true
+                                        }
                                     },
                                     sourcehypervisorversion: {
                                         label: 'Source hypervisor version'
                                     },
                                     osdisplayname: {
-                                        label: 'Guest OS'
+                                        label: 'Guest OS',
+                                        validation: {
+                                            required: true
+                                        }
                                     },
                                     sourceguestos: {
                                         label: 'Source guest OS'
@@ -912,9 +923,8 @@
                         osdisplayname: {
                             label: 'Guest OS'
                         },
-                        fordisplay: {
-                            label: 'Visible to end user',
-                            converter: cloudStack.converters.toBooleanText
+                        osnameforhypervisor: {
+                            label: 'Guest OS identifier'
                         },
                         isuserdefined: {
                             label: 'User defined',
