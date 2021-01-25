@@ -391,6 +391,10 @@
                                                 id: 'XenServer',
                                                 description: 'XenServer'
                                             });
+                                            items.push({
+                                                id: 'KVM',
+                                                description: 'KVM'
+                                            });
                                             args.response.success({
                                                 data: items
                                             });
@@ -740,6 +744,10 @@
                                                 id: 'XenServer',
                                                 description: 'XenServer'
                                             });
+                                            items.push({
+                                                id: 'KVM',
+                                                description: 'KVM'
+                                            });
                                             args.response.success({
                                                 data: items
                                             });
@@ -804,6 +812,10 @@
                                             items.push({
                                                 id: 'XenServer',
                                                 description: 'XenServer'
+                                            });
+                                            items.push({
+                                                id: 'KVM',
+                                                description: 'KVM'
                                             });
                                             args.response.success({
                                                 data: items
