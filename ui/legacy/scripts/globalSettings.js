@@ -842,6 +842,10 @@
                                     },
                                     sourceguestos: {
                                         label: 'Source guest OS'
+                                    },
+                                    forced: {
+                                        label: 'Force copy',
+                                        isBoolean: true
                                     }
                                 }
                             },
