@@ -378,6 +378,7 @@
                             label: 'Add hypervisor capabilities',
                             createForm: {
                                 title: 'Add hypervisor capabilities',
+                                desc: 'Add a hypervisor. Hypervisor capabilities will be copied from source hypervisor version.',
                                 fields: {
                                     hypervisor: {
                                         label: 'Hypervisor type',
@@ -799,7 +800,7 @@
                             },
                             createForm: {
                                 title: 'Copy Guest OS mapping',
-                                desc: 'Copy all guest OS mapping from specific hypervisor version or guest OS. Please input one of source hypervisor version and source guest os.',
+                                desc: 'Copy all guest OS mapping from specific hypervisor version or guest OS. Please input one of source hypervisor version and source guest os.<br><br>wildcard is supported in hypervisor version and guest OS.',
                                 fields: {
                                     hypervisor: {
                                         label: 'Hypervisor type',
@@ -867,7 +868,7 @@
                             },
                             createForm: {
                                 title: 'Update Guest OS mappings',
-                                desc: 'Update guest OS mappings by specific hypervisor version and/or guest OS type.',
+                                desc: 'Update guest OS mappings by specific hypervisor version and/or guest OS type.<br><br>wildcard is supported in hypervisor version and guest OS name.',
                                 fields: {
                                     hypervisor: {
                                         label: 'Hypervisor type',
@@ -976,6 +977,13 @@
                         },
                         hypervisorversion: {
                             label: 'Version'
+                        },
+                        ostypename: {
+                            label: 'Guest OS'
+                        },
+                        isuserdefined: {
+                            label: 'User defined',
+                            isBoolean: true
                         },
                         keyword: {
                             label: 'label.name'
