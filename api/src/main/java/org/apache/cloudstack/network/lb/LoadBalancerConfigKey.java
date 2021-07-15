@@ -145,10 +145,7 @@ public enum LoadBalancerConfigKey {
 
     public static LoadBalancerConfigKey getConfigsByScopeAndName(Scope scope, String name) {
         Map<String, LoadBalancerConfigKey> configs = Configs.get(scope);
-        if (configs.keySet().contains(name)) {
-            return configs.get(name);
-        }
-        return null;
+        return configs.get(name);
     }
 
     public static Scope getScopeFromString(String scope) {
